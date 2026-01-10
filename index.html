@@ -35,7 +35,9 @@
             myWord: '',
             currentGuess: '',
             message: '',
-            confirmedLetters: []
+            confirmedLetters: [],
+            showJoinModal: false,
+            showShareModal: false
         };
         
         sessionStorage.setItem('playerId', state.playerId);
@@ -60,6 +62,45 @@
                     return false;
                 });
         }
+
+        function shareGame(url) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Join my Wordeu game!',
+                    text: 'I challenge you to a game of Wordeu! Click the link to join:',
+                    url: url
+                }).then(function() {
+                    state.showShareModal = false;
+                    render();
+                }).catch(function(err) {
+                    // User cancelled or error - just close modal
+                    console.log('Share cancelled:', err);
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(url).then(function() {
+                    state.message = 'Link copied to clipboard!';
+                    state.showShareModal = false;
+                    render();
+                }).catch(function() {
+                    // Final fallback: show the URL
+                    prompt('Copy this link to share:', url);
+                    state.showShareModal = false;
+                    render();
+                });
+            }
+        }
+
+        function checkUrlForGame() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var gameCode = urlParams.get('game');
+            if (gameCode) {
+                state.gameId = gameCode.toUpperCase();
+                state.message = 'Enter your name to join game ' + state.gameId;
+            }
+        }
+
+        checkUrlForGame();
 
         function createGame() {
             if (!state.playerName.trim()) {
@@ -88,8 +129,11 @@
 
             database.ref('games/' + gameId).set(gameData).then(function() {
                 state.gameId = gameId;
-                state.message = 'Game created! Share the code with your opponent.';
+                state.showShareModal = true;
+                state.message = '';
                 listenToGame(gameId);
+                // Update URL with game code
+                window.history.pushState({}, '', '?game=' + gameId);
                 render();
             }).catch(function(error) {
                 state.message = 'Error creating game: ' + error.message;
@@ -290,7 +334,16 @@
                     if (index > -1) currentConfirmed.splice(index, 1);
                 }
             } else {
-                currentStates[letter] = currentState === 'excluded' ? null : 'excluded';
+                // Short click
+                if (currentState === 'included') {
+                    // If currently included, remove from included (not toggle to excluded)
+                    currentStates[letter] = null;
+                    var index = currentConfirmed.indexOf(letter);
+                    if (index > -1) currentConfirmed.splice(index, 1);
+                } else {
+                    // Toggle between excluded and null
+                    currentStates[letter] = currentState === 'excluded' ? null : 'excluded';
+                }
             }
 
             database.ref('games/' + state.gameId + '/players/' + state.playerId).update({
@@ -306,20 +359,54 @@
             var app = document.getElementById('app');
 
             if (!state.gameState) {
+                var joinModal = '';
+                if (state.showJoinModal) {
+                    joinModal = '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
+                        '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
+                        '<h3 class="text-xl font-bold text-gray-800 mb-4">Enter Game Code</h3>' +
+                        '<input type="text" id="gameCodeInput" placeholder="e.g. ABC123" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                        '<div class="flex gap-3">' +
+                        '<button onclick="state.showJoinModal = false; render()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition">Cancel</button>' +
+                        '<button onclick="state.gameId = document.getElementById(\'gameCodeInput\').value; state.showJoinModal = false; joinGame()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Join</button>' +
+                        '</div></div></div>';
+                }
+
+                var shareModal = '';
+                if (state.showShareModal) {
+                    var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
+                    shareModal = '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
+                        '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
+                        '<h3 class="text-xl font-bold text-gray-800 mb-2">Game Created!</h3>' +
+                        '<p class="text-gray-600 mb-4">Your game code is: <span class="font-bold text-purple-600">' + state.gameId + '</span></p>' +
+                        '<p class="text-gray-600 mb-4">Want to invite someone to play?</p>' +
+                        '<div class="flex flex-col gap-3">' +
+                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition">Share Invite Link</button>' +
+                        '<button onclick="state.showShareModal = false; render()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Continue to Game</button>' +
+                        '</div></div></div>';
+                }
+
+                // Check if we have a game code from URL
+                var hasGameCode = state.gameId && state.gameId.length > 0;
+                var buttonsHtml = '';
+                
+                if (hasGameCode) {
+                    // Show single join button when coming from invite link
+                    buttonsHtml = '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>';
+                } else {
+                    // Show both buttons normally
+                    buttonsHtml = '<div class="flex gap-3">' +
+                        '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition text-base">Start New Game</button>' +
+                        '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition text-base">Join Existing Game</button>' +
+                        '</div>';
+                }
+
                 app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h1 class="text-4xl font-bold text-gray-800 text-center mb-6">Wordeu</h1>' +
                     '<input type="text" id="playerName" placeholder="Your name" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
-                    '<button onclick="state.playerName = document.getElementById(\'playerName\').value; state.gameId = document.getElementById(\'gameId\').value; createGame()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg mb-4 transition text-lg">Create New Game</button>' +
-                    '<div class="flex items-center my-4">' +
-                    '<div class="flex-1 border-t border-gray-300"></div>' +
-                    '<span class="px-4 text-gray-500">OR</span>' +
-                    '<div class="flex-1 border-t border-gray-300"></div>' +
-                    '</div>' +
-                    '<input type="text" id="gameId" placeholder="Enter game code" value="' + state.gameId + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase focus:outline-none focus:border-purple-500">' +
-                    '<button onclick="state.playerName = document.getElementById(\'playerName\').value; state.gameId = document.getElementById(\'gameId\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game</button>' +
+                    buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '</div></div>';
+                    '</div></div>' + joinModal + shareModal;
                 return;
             }
 
@@ -389,6 +476,18 @@
                 guessesHtml = '<div class="text-gray-400 text-center py-4">No guesses yet</div>';
             }
 
+            var opponentGuessesHtml = '';
+            if (opponent && opponent.guesses && opponent.guesses.length > 0) {
+                for (var i = 0; i < opponent.guesses.length; i++) {
+                    var guess = opponent.guesses[i];
+                    opponentGuessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
+                        '<span class="text-xl font-bold tracking-wider">' + guess.word + '</span>' +
+                        '<span class="bg-orange-500 text-white px-3 py-1 rounded-full font-bold">' + guess.matches + ' match' + (guess.matches !== 1 ? 'es' : '') + '</span></div>';
+                }
+            } else {
+                opponentGuessesHtml = '<div class="text-gray-400 text-center py-4">No guesses yet</div>';
+            }
+
             var gameContent = '';
             if (myPlayer.won) {
                 gameContent = '<div class="bg-green-500 rounded-2xl shadow-2xl p-8 text-center">' +
@@ -433,8 +532,14 @@
                 '<div class="text-sm text-gray-600 mb-2 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
                 '<div class="flex flex-wrap gap-2" id="alphabet">' + alphabetHtml + '</div></div>' +
                 '<div class="border-t pt-4">' +
+                '<div class="grid grid-cols-2 gap-4">' +
+                '<div>' +
                 '<div class="text-sm text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
-                '<div class="space-y-2 max-h-64 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
+                '<div class="space-y-2 max-h-64 overflow-y-auto">' + guessesHtml + '</div></div>' +
+                '<div>' +
+                '<div class="text-sm text-gray-600 mb-2 font-semibold">' + (opponent ? opponent.name + "'s" : "Opponent's") + ' Guesses:</div>' +
+                '<div class="space-y-2 max-h-64 overflow-y-auto">' + opponentGuessesHtml + '</div></div>' +
+                '</div></div></div>' +
                 gameContent + '</div>';
 
             var letterBtns = document.querySelectorAll('.letter-btn');
