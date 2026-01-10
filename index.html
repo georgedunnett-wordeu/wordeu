@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordeu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 min-h-screen">
+    <div id="app"></div>
+    <script>
+        var fbConfig = {
+            apiKey: "AIzaSyA9SGAh5bXJyNNs7LD9Jd8kFkRW4JRv6gI",
+            authDomain: "wordeu-742d5.firebaseapp.com",
+            databaseURL: "https://wordeu-742d5-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "wordeu-742d5",
+            storageBucket: "wordeu-742d5.firebasestorage.app",
+            messagingSenderId: "391013275080",
+            appId: "1:391013275080:web:51d96cabffbc1527521cfd"
+        };
+        firebase.initializeApp(fbConfig);
+        var database = firebase.database();
+
+        var savedId = sessionStorage.getItem('playerId');
+        var newId = Math.random().toString(36).substr(2, 9);
+        var playerId = savedId ? savedId : newId;
+        
+        var state = {
+            playerId: playerId,
+            playerName: '',
+            gameId: '',
+            gameState: null,
+            myWord: '',
+            currentGuess: '',
+            message: '',
+            confirmedLetters: []
+        };
+        
+        sessionStorage.setItem('playerId', state.playerId);
+        
+        var ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+        function hasUniqueLetters(word) {
+            var letters = {};
+            for (var i = 0; i < word.length; i++) {
+                if (letters[word[i]]) return false;
+                letters[word[i]] = true;
+            }
+            return true;
+        }
+
+        function checkWord(word) {
+            return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
+                .then(function(response) {
+                    return response.ok;
+                })
+                .catch(function() {
+                    return false;
+                });
+        }
+
+        function createGame() {
+            if (!state.playerName.trim()) {
+                state.message = 'Please enter your name';
+                render();
+                return;
+            }
+
+            var gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
+            var gameData = {
+                players: {},
+                currentTurn: null,
+                started: false,
+                createdAt: Date.now()
+            };
+
+            gameData.players[state.playerId] = {
+                name: state.playerName,
+                word: '',
+                wordSet: false,
+                guesses: [],
+                letterStates: {},
+                confirmedLetters: [],
+                won: false
+            };
+
+            database.ref('games/' + gameId).set(gameData).then(function() {
+                state.gameId = gameId;
+                state.message = 'Game created! Share the code with your opponent.';
+                listenToGame(gameId);
+                render();
+            }).catch(function(error) {
+                state.message = 'Error creating game: ' + error.message;
+                render();
+            });
+        }
+
+        function joinGame() {
+            if (!state.playerName.trim()) {
+                state.message = 'Please enter your name';
+                render();
+                return;
+            }
+
+            var gameId = state.gameId.toUpperCase();
+            database.ref('games/' + gameId).once('value').then(function(snapshot) {
+                if (!snapshot.exists()) {
+                    state.message = 'Game not found';
+                    render();
+                    return;
+                }
+
+                var game = snapshot.val();
+                if (game.players[state.playerId]) {
+                    state.message = 'Rejoined game';
+                    listenToGame(gameId);
+                    render();
+                    return;
+                }
+
+                if (Object.keys(game.players).length >= 2) {
+                    state.message = 'Game is full';
+                    render();
+                    return;
+                }
+
+                database.ref('games/' + gameId + '/players/' + state.playerId).set({
+                    name: state.playerName,
+                    word: '',
+                    wordSet: false,
+                    guesses: [],
+                    letterStates: {},
+                    confirmedLetters: [],
+                    won: false
+                }).then(function() {
+                    state.message = 'Joined game! Choose your secret word.';
+                    listenToGame(gameId);
+                    render();
+                }).catch(function(error) {
+                    state.message = 'Error joining game: ' + error.message;
+                    render();
+                });
+            }).catch(function(error) {
+                state.message = 'Error finding game: ' + error.message;
+                render();
+            });
+        }
+
+        function listenToGame(gameId) {
+            database.ref('games/' + gameId).on('value', function(snapshot) {
+                if (snapshot.exists()) {
+                    state.gameState = snapshot.val();
+                    var myPlayer = state.gameState.players[state.playerId];
+                    if (myPlayer) {
+                        state.confirmedLetters = myPlayer.confirmedLetters || [];
+                    }
+                    render();
+                }
+            });
+        }
+
+        function setSecretWord() {
+            var word = state.myWord.toUpperCase();
+            if (word.length !== 5) {
+                state.message = 'Word must be exactly 5 letters';
+                render();
+                return;
+            }
+            if (!hasUniqueLetters(word)) {
+                state.message = 'All letters must be unique';
+                render();
+                return;
+            }
+
+            state.message = 'Checking word...';
+            render();
+
+            checkWord(word).then(function(isValid) {
+                if (!isValid) {
+                    state.message = 'Not a valid English word';
+                    render();
+                    return;
+                }
+
+                database.ref('games/' + state.gameId + '/players/' + state.playerId).update({
+                    word: word,
+                    wordSet: true
+                }).then(function() {
+                    database.ref('games/' + state.gameId).once('value').then(function(snapshot) {
+                        var game = snapshot.val();
+                        var allWordsSet = Object.values(game.players).every(function(p) { return p.wordSet; });
+                        if (allWordsSet && !game.started) {
+                            var firstPlayer = Object.keys(game.players)[0];
+                            database.ref('games/' + state.gameId).update({
+                                started: true,
+                                currentTurn: firstPlayer
+                            });
+                        }
+                    });
+                    state.myWord = '';
+                    state.message = 'Word set! Waiting for game to start...';
+                    render();
+                }).catch(function(error) {
+                    state.message = 'Error setting word: ' + error.message;
+                    render();
+                });
+            });
+        }
+
+        function makeGuess() {
+            var guess = state.currentGuess.toUpperCase();
+            if (guess.length !== 5) {
+                state.message = 'Guess must be exactly 5 letters';
+                render();
+                return;
+            }
+            if (!hasUniqueLetters(guess)) {
+                state.message = 'All letters must be unique';
+                render();
+                return;
+            }
+
+            state.message = 'Checking word...';
+            render();
+
+            checkWord(guess).then(function(isValid) {
+                if (!isValid) {
+                    state.message = 'Not a valid English word';
+                    render();
+                    return;
+                }
+
+                var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
+                var opponentWord = state.gameState.players[opponentId].word;
+
+                var matchCount = guess.split('').filter(function(letter) { return opponentWord.includes(letter); }).length;
+                var isWin = guess === opponentWord;
+
+                var newGuess = {
+                    word: guess,
+                    matches: matchCount,
+                    timestamp: Date.now()
+                };
+
+                var myGuesses = state.gameState.players[state.playerId].guesses || [];
+                myGuesses.push(newGuess);
+
+                var updates = {};
+                updates['games/' + state.gameId + '/players/' + state.playerId + '/guesses'] = myGuesses;
+
+                if (isWin) {
+                    updates['games/' + state.gameId + '/players/' + state.playerId + '/won'] = true;
+                    state.message = '🎉 You won! You guessed their word!';
+                } else {
+                    updates['games/' + state.gameId + '/currentTurn'] = opponentId;
+                }
+
+                database.ref().update(updates).catch(function(error) {
+                    state.message = 'Error submitting guess: ' + error.message;
+                    render();
+                });
+                state.currentGuess = '';
+                render();
+            });
+        }
+
+        function toggleLetterState(letter, longPress) {
+            var currentStates = state.gameState.players[state.playerId].letterStates || {};
+            var currentConfirmed = state.gameState.players[state.playerId].confirmedLetters || [];
+            var currentState = currentStates[letter];
+
+            if (longPress) {
+                // Check if trying to add a new included letter
+                if (currentState !== 'included' && currentConfirmed.length >= 5) {
+                    state.message = 'Maximum 5 letters can be included';
+                    render();
+                    return;
+                }
+                
+                var newState = currentState === 'included' ? null : 'included';
+                currentStates[letter] = newState;
+
+                if (newState === 'included' && currentConfirmed.indexOf(letter) === -1) {
+                    currentConfirmed.push(letter);
+                } else if (newState === null) {
+                    var index = currentConfirmed.indexOf(letter);
+                    if (index > -1) currentConfirmed.splice(index, 1);
+                }
+            } else {
+                currentStates[letter] = currentState === 'excluded' ? null : 'excluded';
+            }
+
+            database.ref('games/' + state.gameId + '/players/' + state.playerId).update({
+                letterStates: currentStates,
+                confirmedLetters: currentConfirmed
+            }).catch(function(error) {
+                state.message = 'Error updating letters: ' + error.message;
+                render();
+            });
+        }
+
+        function render() {
+            var app = document.getElementById('app');
+
+            if (!state.gameState) {
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
+                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-6">Wordeu</h1>' +
+                    '<input type="text" id="playerName" placeholder="Your name" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
+                    '<button onclick="state.playerName = document.getElementById(\'playerName\').value; state.gameId = document.getElementById(\'gameId\').value; createGame()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg mb-4 transition text-lg">Create New Game</button>' +
+                    '<div class="flex items-center my-4">' +
+                    '<div class="flex-1 border-t border-gray-300"></div>' +
+                    '<span class="px-4 text-gray-500">OR</span>' +
+                    '<div class="flex-1 border-t border-gray-300"></div>' +
+                    '</div>' +
+                    '<input type="text" id="gameId" placeholder="Enter game code" value="' + state.gameId + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase focus:outline-none focus:border-purple-500">' +
+                    '<button onclick="state.playerName = document.getElementById(\'playerName\').value; state.gameId = document.getElementById(\'gameId\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game</button>' +
+                    (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
+                    '</div></div>';
+                return;
+            }
+
+            var myPlayer = state.gameState.players[state.playerId];
+            if (!myPlayer.wordSet) {
+                var opponent = Object.values(state.gameState.players).find(function(p) { return p !== myPlayer; });
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
+                    '<h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Choose Your Secret Word</h2>' +
+                    '<p class="text-gray-600 mb-4 text-center">Pick a 5-letter word with unique letters</p>' +
+                    '<input type="text" id="myWord" placeholder="Your secret word" value="' + state.myWord + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                    '<button onclick="state.myWord = document.getElementById(\'myWord\').value; setSecretWord()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Set Word</button>' +
+                    (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
+                    (opponent && !opponent.wordSet ? '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + ' to choose their word...</div>' : '') +
+                    '</div></div>';
+
+                var wordInput = document.getElementById('myWord');
+                if (wordInput) {
+                    wordInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            state.myWord = wordInput.value;
+                            setSecretWord();
+                        }
+                    });
+                }
+                return;
+            }
+
+            var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
+            var opponent = opponentId ? state.gameState.players[opponentId] : null;
+            var isMyTurn = state.gameState.currentTurn === state.playerId;
+            var letterStates = myPlayer.letterStates || {};
+
+            var confirmedLetters = state.confirmedLetters || [];
+            var circlePositions = [];
+            for (var i = 0; i < 5; i++) {
+                var angle = (i * 72 - 90) * (Math.PI / 180);
+                var x = 110 + 80 * Math.cos(angle);
+                var y = 110 + 80 * Math.sin(angle);
+                circlePositions.push({ x: x, y: y, letter: confirmedLetters[i] || '' });
+            }
+
+            var circleSvg = '';
+            for (var i = 0; i < circlePositions.length; i++) {
+                var pos = circlePositions[i];
+                circleSvg += '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="20" fill="' + (pos.letter ? '#22c55e' : '#f3f4f6') + '" stroke="#d1d5db" stroke-width="2"/>' +
+                    '<text x="' + pos.x + '" y="' + pos.y + '" text-anchor="middle" dy="7" font-size="20" font-weight="bold" fill="' + (pos.letter ? 'white' : '#9ca3af') + '">' + pos.letter + '</text></g>';
+            }
+
+            var alphabetHtml = '';
+            for (var i = 0; i < ALPHABET.length; i++) {
+                var letter = ALPHABET[i];
+                var lState = letterStates[letter];
+                var btnClass = lState === 'excluded' ? 'bg-red-500 text-white line-through' : lState === 'included' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300';
+                alphabetHtml += '<button data-letter="' + letter + '" class="letter-btn w-10 h-10 rounded font-bold text-lg transition ' + btnClass + '">' + letter + '</button>';
+            }
+
+            var guessesHtml = '';
+            if (myPlayer.guesses && myPlayer.guesses.length > 0) {
+                for (var i = 0; i < myPlayer.guesses.length; i++) {
+                    var guess = myPlayer.guesses[i];
+                    guessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
+                        '<span class="text-xl font-bold tracking-wider">' + guess.word + '</span>' +
+                        '<span class="bg-purple-500 text-white px-3 py-1 rounded-full font-bold">' + guess.matches + ' match' + (guess.matches !== 1 ? 'es' : '') + '</span></div>';
+                }
+            } else {
+                guessesHtml = '<div class="text-gray-400 text-center py-4">No guesses yet</div>';
+            }
+
+            var gameContent = '';
+            if (myPlayer.won) {
+                gameContent = '<div class="bg-green-500 rounded-2xl shadow-2xl p-8 text-center">' +
+                    '<h2 class="text-4xl font-bold text-white mb-2">You Won! 🎉</h2>' +
+                    '<p class="text-xl text-white">You guessed their word in ' + myPlayer.guesses.length + ' tries!</p></div>';
+            } else if (opponent && opponent.won) {
+                gameContent = '<div class="bg-red-500 rounded-2xl shadow-2xl p-8 text-center">' +
+                    '<h2 class="text-4xl font-bold text-white mb-2">You Lost</h2>' +
+                    '<p class="text-xl text-white">' + opponent.name + ' guessed your word first!</p></div>';
+            } else if (state.gameState.started) {
+                var turnClass = isMyTurn ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                var turnMsg = isMyTurn ? "Your turn! Make a guess" : "Waiting for " + (opponent ? opponent.name : '') + "'s guess...";
+                var inputHtml = '';
+                if (isMyTurn) {
+                    inputHtml = '<input type="text" id="currentGuess" placeholder="Enter your guess" value="' + state.currentGuess + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                        '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Submit Guess</button>';
+                }
+                gameContent = '<div class="bg-white rounded-2xl shadow-2xl p-6">' +
+                    '<div class="mb-4 p-3 rounded-lg text-center font-semibold ' + turnClass + '">' + turnMsg + '</div>' +
+                    inputHtml +
+                    (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
+                    '</div>';
+            } else {
+                gameContent = '<div class="bg-white rounded-2xl shadow-2xl p-6 text-center"><p class="text-xl text-gray-600">Waiting for opponent...</p></div>';
+            }
+
+            app.innerHTML = '<div class="max-w-5xl mx-auto p-4">' +
+                '<div class="bg-white rounded-2xl shadow-2xl p-6 mb-4">' +
+                '<div class="flex items-center justify-between mb-4">' +
+                '<div><h1 class="text-3xl font-bold text-gray-800">Wordeu</h1>' +
+                '<p class="text-gray-600">Playing against: ' + (opponent ? opponent.name : 'Waiting...') + '</p></div>' +
+                '<div class="bg-gray-100 rounded-lg p-3"><span class="text-sm text-gray-600">Code: </span>' +
+                '<span class="text-lg font-bold">' + state.gameId + '</span></div></div>' +
+                '<div class="bg-gray-50 rounded-lg p-4 mb-4">' +
+                '<div class="text-sm text-gray-500 mb-2">Your Secret Word:</div>' +
+                '<div class="text-3xl font-bold tracking-widest text-gray-400">' + myPlayer.word + '</div></div>' +
+                '<div class="flex justify-center mb-4">' +
+                '<svg width="220" height="220" viewBox="0 0 220 220">' +
+                '<circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' +
+                circleSvg + '</svg></div>' +
+                '<div class="mb-4">' +
+                '<div class="text-sm text-gray-600 mb-2 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
+                '<div class="flex flex-wrap gap-2" id="alphabet">' + alphabetHtml + '</div></div>' +
+                '<div class="border-t pt-4">' +
+                '<div class="text-sm text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
+                '<div class="space-y-2 max-h-64 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
+                gameContent + '</div>';
+
+            var letterBtns = document.querySelectorAll('.letter-btn');
+            letterBtns.forEach(function(btn) {
+                var pressTimer = null;
+                var longPressTriggered = false;
+                var letter = btn.dataset.letter;
+
+                btn.addEventListener('mousedown', function() {
+                    longPressTriggered = false;
+                    pressTimer = setTimeout(function() {
+                        longPressTriggered = true;
+                        toggleLetterState(letter, true);
+                    }, 500);
+                });
+                btn.addEventListener('mouseup', function() {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        if (!longPressTriggered) {
+                            toggleLetterState(letter, false);
+                        }
+                    }
+                });
+                btn.addEventListener('mouseleave', function() {
+                    if (pressTimer) clearTimeout(pressTimer);
+                });
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    longPressTriggered = false;
+                    pressTimer = setTimeout(function() {
+                        longPressTriggered = true;
+                        toggleLetterState(letter, true);
+                    }, 500);
+                });
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        if (!longPressTriggered) {
+                            toggleLetterState(letter, false);
+                        }
+                    }
+                });
+            });
+
+            var guessInput = document.getElementById('currentGuess');
+            if (guessInput) {
+                guessInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        state.currentGuess = guessInput.value;
+                        makeGuess();
+                    }
+                });
+            }
+        }
+
+        render();
+    </script>
+</body>
+</html>
