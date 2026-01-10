@@ -104,7 +104,8 @@
                 return;
             }
 
-            var gameId = state.gameId.toUpperCase();
+            state.gameId = state.gameId.toUpperCase();
+            var gameId = state.gameId;
             database.ref('games/' + gameId).once('value').then(function(snapshot) {
                 if (!snapshot.exists()) {
                     state.message = 'Game not found';
