@@ -235,8 +235,9 @@
                 }).then(function() {
                     database.ref('games/' + state.gameId).once('value').then(function(snapshot) {
                         var game = snapshot.val();
+                        var playerCount = Object.keys(game.players).length;
                         var allWordsSet = Object.values(game.players).every(function(p) { return p.wordSet; });
-                        if (allWordsSet && !game.started) {
+                        if (playerCount === 2 && allWordsSet && !game.started) {
                             var firstPlayer = Object.keys(game.players)[0];
                             database.ref('games/' + state.gameId).update({
                                 started: true,
@@ -278,12 +279,15 @@
                 }
 
                 var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
-                var opponentWord = state.gameState.players[opponentId].word;
                 
-                console.log('My ID:', state.playerId);
-                console.log('Opponent ID:', opponentId);
-                console.log('Opponent word:', opponentWord);
-                console.log('My guess:', guess);
+                // Check if opponent exists and has set their word
+                if (!opponentId || !state.gameState.players[opponentId].wordSet) {
+                    state.message = 'Waiting for opponent to set their word';
+                    render();
+                    return;
+                }
+                
+                var opponentWord = state.gameState.players[opponentId].word;
 
                 var matchCount = 0;
                 for (var i = 0; i < guess.length; i++) {
@@ -291,7 +295,6 @@
                         matchCount++;
                     }
                 }
-                console.log('Match count:', matchCount);
                 
                 var isWin = guess === opponentWord;
 
@@ -425,6 +428,23 @@
             var myPlayer = state.gameState.players[state.playerId];
             if (!myPlayer.wordSet) {
                 var opponent = Object.values(state.gameState.players).find(function(p) { return p !== myPlayer; });
+                var playerCount = Object.keys(state.gameState.players).length;
+                var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
+                
+                var statusHtml = '';
+                if (playerCount === 1) {
+                    // Only player 1, waiting for player 2
+                    statusHtml = '<div class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg text-center">' +
+                        '<p class="font-semibold mb-2">⏳ Waiting for another player to join...</p>' +
+                        '<p class="text-sm mb-3">Share the game code: <span class="font-bold">' + state.gameId + '</span></p>' +
+                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Share Invite Link</button>' +
+                        '</div>';
+                } else if (opponent && !opponent.wordSet) {
+                    statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + ' to choose their word...</div>';
+                } else if (opponent && opponent.wordSet) {
+                    statusHtml = '<div class="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center">🎉 ' + opponent.name + ' has joined and is ready! Set your word to start.</div>';
+                }
+                
                 app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Choose Your Secret Word</h2>' +
@@ -432,7 +452,7 @@
                     '<input type="text" id="myWord" placeholder="Your secret word" value="' + state.myWord + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                     '<button onclick="state.myWord = document.getElementById(\'myWord\').value; setSecretWord()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Set Word</button>' +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    (opponent && !opponent.wordSet ? '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + ' to choose their word...</div>' : '') +
+                    statusHtml +
                     '</div></div>';
 
                 var wordInput = document.getElementById('myWord');
@@ -478,7 +498,7 @@
 
             var guessesHtml = '';
             if (myPlayer.guesses && myPlayer.guesses.length > 0) {
-                for (var i = 0; i < myPlayer.guesses.length; i++) {
+                for (var i = myPlayer.guesses.length - 1; i >= 0; i--) {
                     var guess = myPlayer.guesses[i];
                     guessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
                         '<span class="text-xl font-bold tracking-wider">' + guess.word + '</span>' +
@@ -490,7 +510,7 @@
 
             var opponentGuessesHtml = '';
             if (opponent && opponent.guesses && opponent.guesses.length > 0) {
-                for (var i = 0; i < opponent.guesses.length; i++) {
+                for (var i = opponent.guesses.length - 1; i >= 0; i--) {
                     var guess = opponent.guesses[i];
                     opponentGuessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
                         '<span class="text-xl font-bold tracking-wider">' + guess.word + '</span>' +
