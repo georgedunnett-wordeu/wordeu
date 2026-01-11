@@ -555,7 +555,13 @@
                 '<span class="text-lg font-bold">' + state.gameId + '</span></div></div>' +
                 '<div class="bg-gray-50 rounded-lg p-4 mb-4">' +
                 '<div class="text-sm text-gray-500 mb-2">Your Secret Word:</div>' +
-                '<div class="text-3xl font-bold tracking-widest text-gray-400">' + myPlayer.word + '</div></div>' +
+                '<div class="flex items-center justify-center gap-3">' +
+                '<div id="secretWord" class="text-3xl font-bold tracking-widest text-gray-400">*****</div>' +
+                '<button id="showWordBtn" class="p-2 rounded-full hover:bg-gray-200 transition animate-pulse">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500">' +
+                '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>' +
+                '<circle cx="12" cy="12" r="3"></circle>' +
+                '</svg></button></div></div>' +
                 '<div class="flex justify-center mb-4">' +
                 '<svg width="220" height="220" viewBox="0 0 220 220">' +
                 '<circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' +
@@ -624,6 +630,29 @@
                         state.currentGuess = guessInput.value;
                         makeGuess();
                     }
+                });
+            }
+
+            var showWordBtn = document.getElementById('showWordBtn');
+            var secretWordEl = document.getElementById('secretWord');
+            if (showWordBtn && secretWordEl) {
+                var actualWord = myPlayer.word;
+                showWordBtn.addEventListener('mousedown', function() {
+                    secretWordEl.textContent = actualWord;
+                });
+                showWordBtn.addEventListener('mouseup', function() {
+                    secretWordEl.textContent = '*****';
+                });
+                showWordBtn.addEventListener('mouseleave', function() {
+                    secretWordEl.textContent = '*****';
+                });
+                showWordBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    secretWordEl.textContent = actualWord;
+                });
+                showWordBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    secretWordEl.textContent = '*****';
                 });
             }
         }
