@@ -279,8 +279,20 @@
 
                 var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
                 var opponentWord = state.gameState.players[opponentId].word;
+                
+                console.log('My ID:', state.playerId);
+                console.log('Opponent ID:', opponentId);
+                console.log('Opponent word:', opponentWord);
+                console.log('My guess:', guess);
 
-                var matchCount = guess.split('').filter(function(letter) { return opponentWord.includes(letter); }).length;
+                var matchCount = 0;
+                for (var i = 0; i < guess.length; i++) {
+                    if (opponentWord.indexOf(guess[i]) !== -1) {
+                        matchCount++;
+                    }
+                }
+                console.log('Match count:', matchCount);
+                
                 var isWin = guess === opponentWord;
 
                 var newGuess = {
