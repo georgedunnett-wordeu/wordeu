@@ -7,7 +7,7 @@
     <meta name="description" content="Challenge friends to guess your secret 5-letter word! A fun two-player word guessing game.">
     <meta property="og:title" content="Wordo - 5 Letters Word Game">
     <meta property="og:description" content="Challenge friends to guess your secret 5-letter word!">
-    <meta property="og:url" content="https://www.5letters.net">
+    <meta property="og:url" content="https://www.5letters.fun">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Wordo - 5 Letters Word Game">
@@ -426,7 +426,7 @@
                     : '<div class="flex gap-3"><button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition">Start New Game</button>' +
                       '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition">Join Game</button></div>';
                 
-                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
+                app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">Wordo</h1>' +
                     '<div class="flex justify-center gap-4 mb-6">' +
                     '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">How to Play</button>' +
@@ -434,7 +434,7 @@
                     '<input type="text" id="playerName" placeholder="Your name" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '</div></div>' + joinModal + shareModal + modals;
+                    '</div><p class="text-gray-500 text-xs mt-4">Copyright 2026 5letters.fun</p></div>' + joinModal + shareModal + modals;
                 return;
             }
 
@@ -572,7 +572,7 @@
                 (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
                 '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
                 '<div class="space-y-1 max-h-72 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
-                gameEndContent + '</div>' + modals;
+                gameEndContent + '<p class="text-gray-500 text-xs text-center mt-2">Copyright 2026 5letters.fun</p></div>' + modals;
 
             var letterBtns = document.querySelectorAll('.letter-btn');
             letterBtns.forEach(function(btn) {
