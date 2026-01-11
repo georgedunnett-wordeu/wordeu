@@ -7,9 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
+    <style>
+        .banner-enter { animation: slideDown 0.3s ease-out; }
+        .banner-exit { animation: slideUp 0.3s ease-in forwards; }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 min-h-screen">
     <div id="app"></div>
+    <div id="banner"></div>
     <script>
         var fbConfig = {
             apiKey: "AIzaSyA9SGAh5bXJyNNs7LD9Jd8kFkRW4JRv6gI",
@@ -23,12 +30,33 @@
         firebase.initializeApp(fbConfig);
         var database = firebase.database();
 
-        var savedId = sessionStorage.getItem('playerId');
+        var savedId = localStorage.getItem('visitorId');
         var newId = Math.random().toString(36).substr(2, 9);
-        var playerId = savedId ? savedId : newId;
-        
+        var visitorId = savedId ? savedId : newId;
+        localStorage.setItem('visitorId', visitorId);
+
+        var sessionPlayerId = sessionStorage.getItem('playerId');
+        if (!sessionPlayerId) {
+            sessionPlayerId = Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('playerId', sessionPlayerId);
+        }
+
+        function loadStats() {
+            var stats = localStorage.getItem('wordeuStats_' + visitorId);
+            if (stats) return JSON.parse(stats);
+            return { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, currentStreak: 0, bestStreak: 0, totalGuesses: 0, quickestWin: null };
+        }
+
+        function saveStats(stats) {
+            localStorage.setItem('wordeuStats_' + visitorId, JSON.stringify(stats));
+        }
+
+        function isFirstTimeUser() { return !localStorage.getItem('wordeuInstructionsSeen'); }
+        function markInstructionsSeen() { localStorage.setItem('wordeuInstructionsSeen', 'true'); }
+
         var state = {
-            playerId: playerId,
+            playerId: sessionPlayerId,
+            visitorId: visitorId,
             playerName: '',
             gameId: '',
             gameState: null,
@@ -37,10 +65,13 @@
             message: '',
             confirmedLetters: [],
             showJoinModal: false,
-            showShareModal: false
+            showShareModal: false,
+            showInstructions: isFirstTimeUser(),
+            showStats: false,
+            circleExpanded: true,
+            lastOpponentGuessCount: 0,
+            stats: loadStats()
         };
-        
-        sessionStorage.setItem('playerId', state.playerId);
         
         var ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -55,35 +86,21 @@
 
         function checkWord(word) {
             return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
-                .then(function(response) {
-                    return response.ok;
-                })
-                .catch(function() {
-                    return false;
-                });
+                .then(function(response) { return response.ok; })
+                .catch(function() { return false; });
         }
 
         function shareGame(url) {
             if (navigator.share) {
-                navigator.share({
-                    title: 'Join my Wordeu game!',
-                    text: 'I challenge you to a game of Wordeu! Click the link to join:',
-                    url: url
-                }).then(function() {
-                    state.showShareModal = false;
-                    render();
-                }).catch(function(err) {
-                    // User cancelled or error - just close modal
-                    console.log('Share cancelled:', err);
-                });
+                navigator.share({ title: 'Join my Wordeu game!', text: 'I challenge you to a game of Wordeu!', url: url })
+                .then(function() { state.showShareModal = false; render(); })
+                .catch(function(err) { console.log('Share cancelled:', err); });
             } else {
-                // Fallback: copy to clipboard
                 navigator.clipboard.writeText(url).then(function() {
                     state.message = 'Link copied to clipboard!';
                     state.showShareModal = false;
                     render();
                 }).catch(function() {
-                    // Final fallback: show the URL
                     prompt('Copy this link to share:', url);
                     state.showShareModal = false;
                     render();
@@ -99,98 +116,94 @@
                 state.message = 'Enter your name to join game ' + state.gameId;
             }
         }
-
         checkUrlForGame();
 
-        function createGame() {
-            if (!state.playerName.trim()) {
-                state.message = 'Please enter your name';
-                render();
-                return;
+        function showOpponentGuessBanner(guess, matchCount, opponentName, myWord) {
+            var bannerEl = document.getElementById('banner');
+            var matchingLetters = [];
+            for (var i = 0; i < guess.length; i++) {
+                if (myWord.indexOf(guess[i]) !== -1) matchingLetters.push(guess[i]);
             }
+            var matchingLettersHtml = matchingLetters.length > 0 
+                ? matchingLetters.map(function(l) { return '<span class="inline-block w-8 h-8 bg-white text-orange-600 rounded text-center leading-8 font-bold mx-1">' + l + '</span>'; }).join('')
+                : '<span class="text-orange-200">None</span>';
+            
+            bannerEl.innerHTML = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-lg z-50 banner-enter">' +
+                '<div class="max-w-2xl mx-auto text-center">' +
+                '<p class="font-bold text-lg mb-2">' + opponentName + ' guessed: <span class="tracking-widest bg-white/20 px-2 py-1 rounded">' + guess + '</span></p>' +
+                '<p class="text-sm mb-2">Letters matching your word: ' + matchingLettersHtml + ' (' + matchCount + ' match' + (matchCount !== 1 ? 'es' : '') + ')</p>' +
+                '<p class="font-semibold text-yellow-200">⚡ Your turn now!</p>' +
+                '</div></div>';
+            
+            setTimeout(function() {
+                var banner = bannerEl.querySelector('div');
+                if (banner) {
+                    banner.classList.remove('banner-enter');
+                    banner.classList.add('banner-exit');
+                    setTimeout(function() { bannerEl.innerHTML = ''; }, 300);
+                }
+            }, 5000);
+        }
 
+        function updateStats(won, guessCount) {
+            state.stats.gamesPlayed++;
+            if (won) {
+                state.stats.gamesWon++;
+                state.stats.currentStreak++;
+                if (state.stats.currentStreak > state.stats.bestStreak) state.stats.bestStreak = state.stats.currentStreak;
+                state.stats.totalGuesses += guessCount;
+                if (!state.stats.quickestWin || guessCount < state.stats.quickestWin) state.stats.quickestWin = guessCount;
+            } else {
+                state.stats.gamesLost++;
+                state.stats.currentStreak = 0;
+            }
+            saveStats(state.stats);
+        }
+
+        function createGame() {
+            if (!state.playerName.trim()) { state.message = 'Please enter your name'; render(); return; }
             var gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
-            var gameData = {
-                players: {},
-                currentTurn: null,
-                started: false,
-                createdAt: Date.now()
-            };
-
+            var gameData = { players: {}, currentTurn: null, started: false, createdAt: Date.now(), gameOver: false };
             gameData.players[state.playerId] = {
-                name: state.playerName,
-                word: '',
-                wordSet: false,
-                guesses: [],
-                letterStates: {},
-                confirmedLetters: [],
-                won: false
+                name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
+                guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
             };
-
             database.ref('games/' + gameId).set(gameData).then(function() {
                 state.gameId = gameId;
                 state.showShareModal = true;
                 state.message = '';
+                state.lastOpponentGuessCount = 0;
                 listenToGame(gameId);
-                // Update URL with game code
                 window.history.pushState({}, '', '?game=' + gameId);
                 render();
-            }).catch(function(error) {
-                state.message = 'Error creating game: ' + error.message;
-                render();
-            });
+            }).catch(function(error) { state.message = 'Error creating game: ' + error.message; render(); });
         }
 
         function joinGame() {
-            if (!state.playerName.trim()) {
-                state.message = 'Please enter your name';
-                render();
-                return;
-            }
-
+            if (!state.playerName.trim()) { state.message = 'Please enter your name'; render(); return; }
             state.gameId = state.gameId.toUpperCase();
             var gameId = state.gameId;
             database.ref('games/' + gameId).once('value').then(function(snapshot) {
-                if (!snapshot.exists()) {
-                    state.message = 'Game not found';
-                    render();
-                    return;
-                }
-
+                if (!snapshot.exists()) { state.message = 'Game not found'; render(); return; }
                 var game = snapshot.val();
                 if (game.players[state.playerId]) {
                     state.message = 'Rejoined game';
+                    state.lastOpponentGuessCount = 0;
                     listenToGame(gameId);
                     render();
                     return;
                 }
-
-                if (Object.keys(game.players).length >= 2) {
-                    state.message = 'Game is full';
-                    render();
-                    return;
-                }
-
+                if (Object.keys(game.players).length >= 2) { state.message = 'Game is full'; render(); return; }
                 database.ref('games/' + gameId + '/players/' + state.playerId).set({
-                    name: state.playerName,
-                    word: '',
-                    wordSet: false,
-                    guesses: [],
-                    letterStates: {},
-                    confirmedLetters: [],
-                    won: false
+                    name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
+                    guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
                 }).then(function() {
                     state.message = 'Joined game! Choose your secret word.';
+                    state.lastOpponentGuessCount = 0;
                     listenToGame(gameId);
                     render();
-                }).catch(function(error) {
-                    state.message = 'Error joining game: ' + error.message;
-                    render();
-                });
-            }).catch(function(error) {
-                state.message = 'Error finding game: ' + error.message;
-                render();
-            });
+                }).catch(function(error) { state.message = 'Error joining game: ' + error.message; render(); });
+            }).catch(function(error) { state.message = 'Error finding game: ' + error.message; render(); });
         }
 
         function listenToGame(gameId) {
@@ -198,8 +211,27 @@
                 if (snapshot.exists()) {
                     state.gameState = snapshot.val();
                     var myPlayer = state.gameState.players[state.playerId];
-                    if (myPlayer) {
-                        state.confirmedLetters = myPlayer.confirmedLetters || [];
+                    if (myPlayer) state.confirmedLetters = myPlayer.confirmedLetters || [];
+                    
+                    var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
+                    if (opponentId && state.gameState.players[opponentId]) {
+                        var opponent = state.gameState.players[opponentId];
+                        var opponentGuesses = opponent.guesses || [];
+                        if (opponentGuesses.length > state.lastOpponentGuessCount && state.lastOpponentGuessCount > 0) {
+                            var latestGuess = opponentGuesses[opponentGuesses.length - 1];
+                            if (myPlayer && myPlayer.word) showOpponentGuessBanner(latestGuess.word, latestGuess.matches, opponent.name, myPlayer.word);
+                        }
+                        state.lastOpponentGuessCount = opponentGuesses.length;
+                    }
+                    
+                    if (myPlayer && !myPlayer.statsRecorded) {
+                        if (myPlayer.won) {
+                            updateStats(true, myPlayer.guesses.length);
+                            database.ref('games/' + gameId + '/players/' + state.playerId + '/statsRecorded').set(true);
+                        } else if (opponentId && state.gameState.players[opponentId].won) {
+                            updateStats(false, 0);
+                            database.ref('games/' + gameId + '/players/' + state.playerId + '/statsRecorded').set(true);
+                        }
                     }
                     render();
                 }
@@ -208,170 +240,136 @@
 
         function setSecretWord() {
             var word = state.myWord.toUpperCase();
-            if (word.length !== 5) {
-                state.message = 'Word must be exactly 5 letters';
-                render();
-                return;
-            }
-            if (!hasUniqueLetters(word)) {
-                state.message = 'All letters must be unique';
-                render();
-                return;
-            }
-
-            state.message = 'Checking word...';
-            render();
-
+            if (word.length !== 5) { state.message = 'Word must be exactly 5 letters'; render(); return; }
+            if (!hasUniqueLetters(word)) { state.message = 'All letters must be unique'; render(); return; }
+            state.message = 'Checking word...'; render();
             checkWord(word).then(function(isValid) {
-                if (!isValid) {
-                    state.message = 'Not a valid English word';
-                    render();
-                    return;
-                }
-
-                database.ref('games/' + state.gameId + '/players/' + state.playerId).update({
-                    word: word,
-                    wordSet: true
-                }).then(function() {
+                if (!isValid) { state.message = 'Not a valid English word'; render(); return; }
+                database.ref('games/' + state.gameId + '/players/' + state.playerId).update({ word: word, wordSet: true }).then(function() {
                     database.ref('games/' + state.gameId).once('value').then(function(snapshot) {
                         var game = snapshot.val();
                         var playerCount = Object.keys(game.players).length;
                         var allWordsSet = Object.values(game.players).every(function(p) { return p.wordSet; });
                         if (playerCount === 2 && allWordsSet && !game.started) {
                             var firstPlayer = Object.keys(game.players)[0];
-                            database.ref('games/' + state.gameId).update({
-                                started: true,
-                                currentTurn: firstPlayer
-                            });
+                            database.ref('games/' + state.gameId).update({ started: true, currentTurn: firstPlayer });
                         }
                     });
                     state.myWord = '';
                     state.message = 'Word set! Waiting for game to start...';
                     render();
-                }).catch(function(error) {
-                    state.message = 'Error setting word: ' + error.message;
-                    render();
-                });
+                }).catch(function(error) { state.message = 'Error setting word: ' + error.message; render(); });
             });
         }
 
         function makeGuess() {
             var guess = state.currentGuess.toUpperCase();
-            if (guess.length !== 5) {
-                state.message = 'Guess must be exactly 5 letters';
-                render();
-                return;
-            }
-            if (!hasUniqueLetters(guess)) {
-                state.message = 'All letters must be unique';
-                render();
-                return;
-            }
-
-            state.message = 'Checking word...';
-            render();
-
+            if (guess.length !== 5) { state.message = 'Guess must be exactly 5 letters'; render(); return; }
+            if (!hasUniqueLetters(guess)) { state.message = 'All letters must be unique'; render(); return; }
+            state.message = 'Checking word...'; render();
             checkWord(guess).then(function(isValid) {
-                if (!isValid) {
-                    state.message = 'Not a valid English word';
-                    render();
-                    return;
-                }
-
+                if (!isValid) { state.message = 'Not a valid English word'; render(); return; }
                 var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
-                
-                // Check if opponent exists and has set their word
-                if (!opponentId || !state.gameState.players[opponentId].wordSet) {
-                    state.message = 'Waiting for opponent to set their word';
-                    render();
-                    return;
-                }
-                
+                if (!opponentId || !state.gameState.players[opponentId].wordSet) { state.message = 'Waiting for opponent'; render(); return; }
                 var opponentWord = state.gameState.players[opponentId].word;
-
                 var matchCount = 0;
-                for (var i = 0; i < guess.length; i++) {
-                    if (opponentWord.indexOf(guess[i]) !== -1) {
-                        matchCount++;
-                    }
-                }
-                
+                for (var i = 0; i < guess.length; i++) { if (opponentWord.indexOf(guess[i]) !== -1) matchCount++; }
                 var isWin = guess === opponentWord;
-
-                var newGuess = {
-                    word: guess,
-                    matches: matchCount,
-                    timestamp: Date.now()
-                };
-
+                var newGuess = { word: guess, matches: matchCount, timestamp: Date.now() };
                 var myGuesses = state.gameState.players[state.playerId].guesses || [];
                 myGuesses.push(newGuess);
-
                 var updates = {};
                 updates['games/' + state.gameId + '/players/' + state.playerId + '/guesses'] = myGuesses;
-
                 if (isWin) {
                     updates['games/' + state.gameId + '/players/' + state.playerId + '/won'] = true;
-                    state.message = '🎉 You won! You guessed their word!';
+                    updates['games/' + state.gameId + '/gameOver'] = true;
+                    state.message = '🎉 You won!';
                 } else {
                     updates['games/' + state.gameId + '/currentTurn'] = opponentId;
                 }
-
-                database.ref().update(updates).catch(function(error) {
-                    state.message = 'Error submitting guess: ' + error.message;
-                    render();
-                });
+                database.ref().update(updates).catch(function(error) { state.message = 'Error: ' + error.message; render(); });
                 state.currentGuess = '';
                 render();
             });
+        }
+
+        function startRematch() {
+            database.ref('games/' + state.gameId).off('value');
+            state.gameState = null;
+            state.myWord = '';
+            state.currentGuess = '';
+            state.message = '';
+            state.confirmedLetters = [];
+            state.lastOpponentGuessCount = 0;
+            window.history.pushState({}, '', window.location.pathname);
+            state.gameId = '';
+            render();
         }
 
         function toggleLetterState(letter, longPress) {
             var currentStates = state.gameState.players[state.playerId].letterStates || {};
             var currentConfirmed = state.gameState.players[state.playerId].confirmedLetters || [];
             var currentState = currentStates[letter];
-
             if (longPress) {
-                // Check if trying to add a new included letter
-                if (currentState !== 'included' && currentConfirmed.length >= 5) {
-                    state.message = 'Maximum 5 letters can be included';
-                    render();
-                    return;
-                }
-                
+                if (currentState !== 'included' && currentConfirmed.length >= 5) { state.message = 'Maximum 5 letters'; render(); return; }
                 var newState = currentState === 'included' ? null : 'included';
                 currentStates[letter] = newState;
-
-                if (newState === 'included' && currentConfirmed.indexOf(letter) === -1) {
-                    currentConfirmed.push(letter);
-                } else if (newState === null) {
-                    var index = currentConfirmed.indexOf(letter);
-                    if (index > -1) currentConfirmed.splice(index, 1);
-                }
+                if (newState === 'included' && currentConfirmed.indexOf(letter) === -1) currentConfirmed.push(letter);
+                else if (newState === null) { var idx = currentConfirmed.indexOf(letter); if (idx > -1) currentConfirmed.splice(idx, 1); }
             } else {
-                // Short click
                 if (currentState === 'included') {
-                    // If currently included, remove from included (not toggle to excluded)
                     currentStates[letter] = null;
-                    var index = currentConfirmed.indexOf(letter);
-                    if (index > -1) currentConfirmed.splice(index, 1);
+                    var idx = currentConfirmed.indexOf(letter);
+                    if (idx > -1) currentConfirmed.splice(idx, 1);
                 } else {
-                    // Toggle between excluded and null
                     currentStates[letter] = currentState === 'excluded' ? null : 'excluded';
                 }
             }
-
             database.ref('games/' + state.gameId + '/players/' + state.playerId).update({
-                letterStates: currentStates,
-                confirmedLetters: currentConfirmed
-            }).catch(function(error) {
-                state.message = 'Error updating letters: ' + error.message;
-                render();
-            });
+                letterStates: currentStates, confirmedLetters: currentConfirmed
+            }).catch(function(error) { state.message = 'Error: ' + error.message; render(); });
         }
 
         function render() {
             var app = document.getElementById('app');
+            var modals = '';
+            
+            if (state.showInstructions) {
+                modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">How to Play Wordeu</h2>' +
+                    '<div class="space-y-4 text-gray-700">' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span><p>Each player picks a secret 5-letter word with <strong>unique letters</strong></p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span><p>Take turns guessing your opponent\'s word</p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">3</span><p>After each guess, see how many letters match (but not which ones!)</p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">4</span><p>First to guess the opponent\'s word wins!</p></div>' +
+                    '<div class="border-t pt-4 mt-4"><p class="font-semibold mb-2">Tips:</p>' +
+                    '<ul class="list-disc list-inside space-y-1 text-sm">' +
+                    '<li><strong>Click</strong> a letter to exclude it (red)</li>' +
+                    '<li><strong>Long press</strong> a letter to include it (green)</li>' +
+                    '</ul></div></div>' +
+                    '<button onclick="state.showInstructions = false; markInstructionsSeen(); render()" class="w-full mt-6 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Got it!</button>' +
+                    '</div></div>';
+            }
+            
+            if (state.showStats) {
+                var stats = state.stats;
+                var winRate = stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0;
+                var avgGuesses = stats.gamesWon > 0 ? (stats.totalGuesses / stats.gamesWon).toFixed(1) : '-';
+                modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Your Stats</h2>' +
+                    '<div class="grid grid-cols-2 gap-4 mb-4">' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-purple-600">' + stats.gamesPlayed + '</div><div class="text-xs text-gray-600">Games Played</div></div>' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-green-600">' + winRate + '%</div><div class="text-xs text-gray-600">Win Rate</div></div>' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-orange-600">' + stats.currentStreak + '</div><div class="text-xs text-gray-600">Current Streak</div></div>' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-red-600">' + stats.bestStreak + '</div><div class="text-xs text-gray-600">Best Streak</div></div>' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-blue-600">' + avgGuesses + '</div><div class="text-xs text-gray-600">Avg Guesses/Win</div></div>' +
+                    '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-indigo-600">' + (stats.quickestWin || '-') + '</div><div class="text-xs text-gray-600">Quickest Win</div></div>' +
+                    '</div>' +
+                    '<button onclick="state.showStats = false; render()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Close</button>' +
+                    '</div></div>';
+            }
 
             if (!state.gameState) {
                 var joinModal = '';
@@ -385,43 +383,33 @@
                         '<button onclick="state.gameId = document.getElementById(\'gameCodeInput\').value; state.showJoinModal = false; joinGame()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Join</button>' +
                         '</div></div></div>';
                 }
-
                 var shareModal = '';
                 if (state.showShareModal) {
                     var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
                     shareModal = '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                         '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
                         '<h3 class="text-xl font-bold text-gray-800 mb-2">Game Created!</h3>' +
-                        '<p class="text-gray-600 mb-4">Your game code is: <span class="font-bold text-purple-600">' + state.gameId + '</span></p>' +
-                        '<p class="text-gray-600 mb-4">Want to invite someone to play?</p>' +
+                        '<p class="text-gray-600 mb-4">Code: <span class="font-bold text-purple-600">' + state.gameId + '</span></p>' +
                         '<div class="flex flex-col gap-3">' +
                         '<button onclick="shareGame(\'' + gameUrl + '\')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition">Share Invite Link</button>' +
-                        '<button onclick="state.showShareModal = false; render()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Continue to Game</button>' +
+                        '<button onclick="state.showShareModal = false; render()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Continue</button>' +
                         '</div></div></div>';
                 }
-
-                // Check if we have a game code from URL
                 var hasGameCode = state.gameId && state.gameId.length > 0;
-                var buttonsHtml = '';
+                var buttonsHtml = hasGameCode 
+                    ? '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>'
+                    : '<div class="flex gap-3"><button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition">Start New Game</button>' +
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition">Join Game</button></div>';
                 
-                if (hasGameCode) {
-                    // Show single join button when coming from invite link
-                    buttonsHtml = '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>';
-                } else {
-                    // Show both buttons normally
-                    buttonsHtml = '<div class="flex gap-3">' +
-                        '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition text-base">Start New Game</button>' +
-                        '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition text-base">Join Existing Game</button>' +
-                        '</div>';
-                }
-
-                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
-                    '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
-                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-6">Wordeu</h1>' +
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
+                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2">Wordeu</h1>' +
+                    '<div class="flex justify-center gap-4 mb-6">' +
+                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">How to Play</button>' +
+                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">Your Stats</button></div>' +
                     '<input type="text" id="playerName" placeholder="Your name" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '</div></div>' + joinModal + shareModal;
+                    '</div></div>' + joinModal + shareModal + modals;
                 return;
             }
 
@@ -430,40 +418,26 @@
                 var opponent = Object.values(state.gameState.players).find(function(p) { return p !== myPlayer; });
                 var playerCount = Object.keys(state.gameState.players).length;
                 var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
-                
                 var statusHtml = '';
                 if (playerCount === 1) {
-                    // Only player 1, waiting for player 2
                     statusHtml = '<div class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg text-center">' +
-                        '<p class="font-semibold mb-2">⏳ Waiting for another player to join...</p>' +
-                        '<p class="text-sm mb-3">Share the game code: <span class="font-bold">' + state.gameId + '</span></p>' +
-                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Share Invite Link</button>' +
-                        '</div>';
+                        '<p class="font-semibold mb-2">⏳ Waiting for opponent...</p>' +
+                        '<p class="text-sm mb-3">Code: <span class="font-bold">' + state.gameId + '</span></p>' +
+                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Share Invite</button></div>';
                 } else if (opponent && !opponent.wordSet) {
-                    statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + ' to choose their word...</div>';
+                    statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + '...</div>';
                 } else if (opponent && opponent.wordSet) {
-                    statusHtml = '<div class="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center">🎉 ' + opponent.name + ' has joined and is ready! Set your word to start.</div>';
+                    statusHtml = '<div class="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center">🎉 ' + opponent.name + ' is ready! Set your word.</div>';
                 }
-                
-                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4">' +
-                    '<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Choose Your Secret Word</h2>' +
                     '<p class="text-gray-600 mb-4 text-center">Pick a 5-letter word with unique letters</p>' +
                     '<input type="text" id="myWord" placeholder="Your secret word" value="' + state.myWord + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                     '<button onclick="state.myWord = document.getElementById(\'myWord\').value; setSecretWord()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Set Word</button>' +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    statusHtml +
-                    '</div></div>';
-
+                    statusHtml + '</div></div>' + modals;
                 var wordInput = document.getElementById('myWord');
-                if (wordInput) {
-                    wordInput.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            state.myWord = wordInput.value;
-                            setSecretWord();
-                        }
-                    });
-                }
+                if (wordInput) wordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.myWord = wordInput.value; setSecretWord(); } });
                 return;
             }
 
@@ -471,8 +445,8 @@
             var opponent = opponentId ? state.gameState.players[opponentId] : null;
             var isMyTurn = state.gameState.currentTurn === state.playerId;
             var letterStates = myPlayer.letterStates || {};
-
             var confirmedLetters = state.confirmedLetters || [];
+
             var circlePositions = [];
             for (var i = 0; i < 5; i++) {
                 var angle = (i * 72 - 90) * (Math.PI / 180);
@@ -480,7 +454,6 @@
                 var y = 110 + 80 * Math.sin(angle);
                 circlePositions.push({ x: x, y: y, letter: confirmedLetters[i] || '' });
             }
-
             var circleSvg = '';
             for (var i = 0; i < circlePositions.length; i++) {
                 var pos = circlePositions[i];
@@ -507,160 +480,95 @@
                         var letterClass = lState === 'excluded' ? 'bg-red-500 text-white' : lState === 'included' ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-800';
                         coloredWord += '<span class="inline-block w-8 h-8 rounded text-center leading-8 font-bold mx-0.5 ' + letterClass + '">' + letter + '</span>';
                     }
-                    guessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
-                        '<div class="flex">' + coloredWord + '</div>' +
-                        '<span class="bg-purple-500 text-white px-3 py-1 rounded-full font-bold">' + guess.matches + ' match' + (guess.matches !== 1 ? 'es' : '') + '</span></div>';
+                    guessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center"><div class="flex">' + coloredWord + '</div>' +
+                        '<span class="bg-purple-500 text-white px-3 py-1 rounded-full font-bold">' + guess.matches + '</span></div>';
                 }
             } else {
                 guessesHtml = '<div class="text-gray-400 text-center py-4">No guesses yet</div>';
-            }
-
-            var opponentGuessesHtml = '';
-            if (opponent && opponent.guesses && opponent.guesses.length > 0) {
-                for (var i = opponent.guesses.length - 1; i >= 0; i--) {
-                    var guess = opponent.guesses[i];
-                    opponentGuessesHtml += '<div class="bg-gray-100 rounded-lg p-3 flex justify-between items-center">' +
-                        '<span class="text-xl font-bold tracking-wider">' + guess.word + '</span>' +
-                        '<span class="bg-orange-500 text-white px-3 py-1 rounded-full font-bold">' + guess.matches + ' match' + (guess.matches !== 1 ? 'es' : '') + '</span></div>';
-                }
-            } else {
-                opponentGuessesHtml = '<div class="text-gray-400 text-center py-4">No guesses yet</div>';
             }
 
             var gameContent = '';
             if (myPlayer.won) {
                 gameContent = '<div class="bg-green-500 rounded-2xl shadow-2xl p-8 text-center">' +
                     '<h2 class="text-4xl font-bold text-white mb-2">You Won! 🎉</h2>' +
-                    '<p class="text-xl text-white">You guessed their word in ' + myPlayer.guesses.length + ' tries!</p></div>';
+                    '<p class="text-xl text-white mb-4">Guessed in ' + myPlayer.guesses.length + ' tries!</p>' +
+                    '<button onclick="startRematch()" class="bg-white text-green-600 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button></div>';
             } else if (opponent && opponent.won) {
                 gameContent = '<div class="bg-red-500 rounded-2xl shadow-2xl p-8 text-center">' +
                     '<h2 class="text-4xl font-bold text-white mb-2">You Lost</h2>' +
-                    '<p class="text-xl text-white">' + opponent.name + ' guessed your word first!</p></div>';
+                    '<p class="text-xl text-white mb-4">' + opponent.name + ' won!</p>' +
+                    '<button onclick="startRematch()" class="bg-white text-red-600 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button></div>';
             } else if (state.gameState.started) {
                 var turnClass = isMyTurn ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
-                var turnMsg = isMyTurn ? "Your turn! Make a guess" : "Waiting for " + (opponent ? opponent.name : '') + "'s guess...";
+                var turnMsg = isMyTurn ? "Your turn!" : "Waiting for " + (opponent ? opponent.name : '') + "...";
                 var inputHtml = '';
                 if (isMyTurn) {
-                    inputHtml = '<input type="text" id="currentGuess" placeholder="Enter your guess" value="' + state.currentGuess + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                    inputHtml = '<input type="text" id="currentGuess" placeholder="Enter guess" value="' + state.currentGuess + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                         '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Submit Guess</button>';
                 }
                 gameContent = '<div class="bg-white rounded-2xl shadow-2xl p-6">' +
-                    '<div class="mb-4 p-3 rounded-lg text-center font-semibold ' + turnClass + '">' + turnMsg + '</div>' +
-                    inputHtml +
-                    (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '</div>';
+                    '<div class="mb-4 p-3 rounded-lg text-center font-semibold ' + turnClass + '">' + turnMsg + '</div>' + inputHtml +
+                    (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') + '</div>';
             } else {
                 gameContent = '<div class="bg-white rounded-2xl shadow-2xl p-6 text-center"><p class="text-xl text-gray-600">Waiting for opponent...</p></div>';
             }
 
-            app.innerHTML = '<div class="max-w-5xl mx-auto p-4">' +
-                '<div class="bg-white rounded-2xl shadow-2xl p-6 mb-4">' +
-                '<div class="flex items-center justify-between mb-4">' +
-                '<div><h1 class="text-3xl font-bold text-gray-800">Wordeu</h1>' +
-                '<p class="text-gray-600">Playing against: ' + (opponent ? opponent.name : 'Waiting...') + '</p></div>' +
-                '<div class="bg-gray-100 rounded-lg p-3"><span class="text-sm text-gray-600">Code: </span>' +
-                '<span class="text-lg font-bold">' + state.gameId + '</span></div></div>' +
-                '<div class="bg-gray-50 rounded-lg p-4 mb-4">' +
-                '<div class="text-sm text-gray-500 mb-2">Your Secret Word:</div>' +
-                '<div class="flex items-center justify-center gap-3">' +
-                '<div id="secretWord" class="text-3xl font-bold tracking-widest text-gray-400">*****</div>' +
-                '<button id="showWordBtn" class="p-2 rounded-full hover:bg-gray-200 transition animate-pulse">' +
-                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500">' +
-                '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>' +
-                '<circle cx="12" cy="12" r="3"></circle>' +
-                '</svg></button></div></div>' +
-                '<div class="flex justify-center mb-4">' +
-                '<svg width="220" height="220" viewBox="0 0 220 220">' +
-                '<circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' +
-                circleSvg + '</svg></div>' +
-                '<div class="mb-4">' +
-                '<div class="text-sm text-gray-600 mb-2 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
+            var circleSection = state.circleExpanded 
+                ? '<div class="mb-4"><button onclick="state.circleExpanded = false; render()" class="flex items-center gap-2 text-sm text-gray-600 mb-2 font-semibold hover:text-gray-800">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>' +
+                  'Confirmed Letters (' + confirmedLetters.length + '/5)</button>' +
+                  '<div class="flex justify-center"><svg width="220" height="220" viewBox="0 0 220 220"><circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div>'
+                : '<div class="mb-4"><button onclick="state.circleExpanded = true; render()" class="flex items-center gap-2 text-sm text-gray-600 font-semibold hover:text-gray-800">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+                  'Confirmed Letters (' + confirmedLetters.length + '/5)</button></div>';
+
+            app.innerHTML = '<div class="max-w-2xl mx-auto p-4"><div class="bg-white rounded-2xl shadow-2xl p-6 mb-4">' +
+                '<div class="flex items-center justify-between mb-4"><div><h1 class="text-3xl font-bold text-gray-800">Wordeu</h1>' +
+                '<p class="text-gray-600">vs ' + (opponent ? opponent.name : 'Waiting...') + '</p></div>' +
+                '<div class="flex items-center gap-2">' +
+                '<button onclick="state.showStats = true; render()" class="p-2 hover:bg-gray-100 rounded-lg" title="Stats"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></button>' +
+                '<div class="bg-gray-100 rounded-lg p-2 text-sm"><span class="text-gray-600">Code: </span><span class="font-bold">' + state.gameId + '</span></div></div></div>' +
+                '<div class="bg-gray-50 rounded-lg p-4 mb-4"><div class="text-sm text-gray-500 mb-2">Your Secret Word:</div>' +
+                '<div class="flex items-center justify-center gap-3"><div id="secretWord" class="text-3xl font-bold tracking-widest text-gray-400">*****</div>' +
+                '<button id="showWordBtn" class="p-2 rounded-full hover:bg-gray-200 transition animate-pulse"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></div>' +
+                circleSection +
+                '<div class="mb-4"><div class="text-sm text-gray-600 mb-2 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
                 '<div class="flex flex-wrap gap-2" id="alphabet">' + alphabetHtml + '</div></div>' +
-                '<div class="border-t pt-4">' +
-                '<div class="grid grid-cols-2 gap-4">' +
-                '<div>' +
-                '<div class="text-sm text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
-                '<div class="space-y-2 max-h-64 overflow-y-auto">' + guessesHtml + '</div></div>' +
-                '<div>' +
-                '<div class="text-sm text-gray-600 mb-2 font-semibold">' + (opponent ? opponent.name + "'s" : "Opponent's") + ' Guesses:</div>' +
-                '<div class="space-y-2 max-h-64 overflow-y-auto">' + opponentGuessesHtml + '</div></div>' +
-                '</div></div></div>' +
-                gameContent + '</div>';
+                '<div class="border-t pt-4"><div class="text-sm text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
+                '<div class="space-y-2 max-h-48 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
+                gameContent + '</div>' + modals;
 
             var letterBtns = document.querySelectorAll('.letter-btn');
             letterBtns.forEach(function(btn) {
                 var pressTimer = null;
                 var longPressTriggered = false;
                 var letter = btn.dataset.letter;
-
                 btn.addEventListener('mousedown', function() {
                     longPressTriggered = false;
-                    pressTimer = setTimeout(function() {
-                        longPressTriggered = true;
-                        toggleLetterState(letter, true);
-                    }, 500);
+                    pressTimer = setTimeout(function() { longPressTriggered = true; toggleLetterState(letter, true); }, 500);
                 });
-                btn.addEventListener('mouseup', function() {
-                    if (pressTimer) {
-                        clearTimeout(pressTimer);
-                        if (!longPressTriggered) {
-                            toggleLetterState(letter, false);
-                        }
-                    }
-                });
-                btn.addEventListener('mouseleave', function() {
-                    if (pressTimer) clearTimeout(pressTimer);
-                });
+                btn.addEventListener('mouseup', function() { if (pressTimer) { clearTimeout(pressTimer); if (!longPressTriggered) toggleLetterState(letter, false); } });
+                btn.addEventListener('mouseleave', function() { if (pressTimer) clearTimeout(pressTimer); });
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     longPressTriggered = false;
-                    pressTimer = setTimeout(function() {
-                        longPressTriggered = true;
-                        toggleLetterState(letter, true);
-                    }, 500);
+                    pressTimer = setTimeout(function() { longPressTriggered = true; toggleLetterState(letter, true); }, 500);
                 });
-                btn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    if (pressTimer) {
-                        clearTimeout(pressTimer);
-                        if (!longPressTriggered) {
-                            toggleLetterState(letter, false);
-                        }
-                    }
-                });
+                btn.addEventListener('touchend', function(e) { e.preventDefault(); if (pressTimer) { clearTimeout(pressTimer); if (!longPressTriggered) toggleLetterState(letter, false); } });
             });
 
             var guessInput = document.getElementById('currentGuess');
-            if (guessInput) {
-                guessInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        state.currentGuess = guessInput.value;
-                        makeGuess();
-                    }
-                });
-            }
+            if (guessInput) guessInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.currentGuess = guessInput.value; makeGuess(); } });
 
             var showWordBtn = document.getElementById('showWordBtn');
             var secretWordEl = document.getElementById('secretWord');
             if (showWordBtn && secretWordEl) {
                 var actualWord = myPlayer.word;
-                showWordBtn.addEventListener('mousedown', function() {
-                    secretWordEl.textContent = actualWord;
-                });
-                showWordBtn.addEventListener('mouseup', function() {
-                    secretWordEl.textContent = '*****';
-                });
-                showWordBtn.addEventListener('mouseleave', function() {
-                    secretWordEl.textContent = '*****';
-                });
-                showWordBtn.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    secretWordEl.textContent = actualWord;
-                });
-                showWordBtn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    secretWordEl.textContent = '*****';
-                });
+                showWordBtn.addEventListener('mousedown', function() { secretWordEl.textContent = actualWord; });
+                showWordBtn.addEventListener('mouseup', function() { secretWordEl.textContent = '*****'; });
+                showWordBtn.addEventListener('mouseleave', function() { secretWordEl.textContent = '*****'; });
+                showWordBtn.addEventListener('touchstart', function(e) { e.preventDefault(); secretWordEl.textContent = actualWord; });
+                showWordBtn.addEventListener('touchend', function(e) { e.preventDefault(); secretWordEl.textContent = '*****'; });
             }
         }
 
