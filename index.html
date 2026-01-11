@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wordeu</title>
+    <title>Wordo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
+        .logo-font { font-family: 'Playfair Display', serif; }
         .banner-enter { animation: slideDown 0.3s ease-out; }
         .banner-exit { animation: slideUp 0.3s ease-in forwards; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
     </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 min-h-screen">
+<body class="bg-gray-800 min-h-screen">
     <div id="app"></div>
     <div id="banner"></div>
     <script>
@@ -42,17 +44,17 @@
         }
 
         function loadStats() {
-            var stats = localStorage.getItem('wordeuStats_' + visitorId);
+            var stats = localStorage.getItem('wordoStats_' + visitorId);
             if (stats) return JSON.parse(stats);
             return { gamesPlayed: 0, gamesWon: 0, gamesLost: 0, currentStreak: 0, bestStreak: 0, totalGuesses: 0, quickestWin: null };
         }
 
         function saveStats(stats) {
-            localStorage.setItem('wordeuStats_' + visitorId, JSON.stringify(stats));
+            localStorage.setItem('wordoStats_' + visitorId, JSON.stringify(stats));
         }
 
-        function isFirstTimeUser() { return !localStorage.getItem('wordeuInstructionsSeen'); }
-        function markInstructionsSeen() { localStorage.setItem('wordeuInstructionsSeen', 'true'); }
+        function isFirstTimeUser() { return !localStorage.getItem('wordoInstructionsSeen'); }
+        function markInstructionsSeen() { localStorage.setItem('wordoInstructionsSeen', 'true'); }
 
         var state = {
             playerId: sessionPlayerId,
@@ -70,7 +72,8 @@
             showStats: false,
             circleExpanded: true,
             lastOpponentGuessCount: 0,
-            stats: loadStats()
+            stats: loadStats(),
+            bannerTimeout: null
         };
         
         var ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -92,7 +95,7 @@
 
         function shareGame(url) {
             if (navigator.share) {
-                navigator.share({ title: 'Join my Wordeu game!', text: 'I challenge you to a game of Wordeu!', url: url })
+                navigator.share({ title: 'Join my Wordo game!', text: 'I challenge you to a game of Wordo!', url: url })
                 .then(function() { state.showShareModal = false; render(); })
                 .catch(function(err) { console.log('Share cancelled:', err); });
             } else {
@@ -128,21 +131,31 @@
                 ? matchingLetters.map(function(l) { return '<span class="inline-block w-8 h-8 bg-white text-orange-600 rounded text-center leading-8 font-bold mx-1">' + l + '</span>'; }).join('')
                 : '<span class="text-orange-200">None</span>';
             
-            bannerEl.innerHTML = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-lg z-50 banner-enter">' +
+            bannerEl.innerHTML = '<div onclick="dismissBanner()" class="fixed top-0 left-0 right-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-lg z-50 banner-enter cursor-pointer">' +
                 '<div class="max-w-2xl mx-auto text-center">' +
                 '<p class="font-bold text-lg mb-2">' + opponentName + ' guessed: <span class="tracking-widest bg-white/20 px-2 py-1 rounded">' + guess + '</span></p>' +
                 '<p class="text-sm mb-2">Letters matching your word: ' + matchingLettersHtml + ' (' + matchCount + ' match' + (matchCount !== 1 ? 'es' : '') + ')</p>' +
                 '<p class="font-semibold text-yellow-200">⚡ Your turn now!</p>' +
+                '<p class="text-xs mt-2 text-orange-200">Tap to dismiss</p>' +
                 '</div></div>';
             
-            setTimeout(function() {
-                var banner = bannerEl.querySelector('div');
-                if (banner) {
-                    banner.classList.remove('banner-enter');
-                    banner.classList.add('banner-exit');
-                    setTimeout(function() { bannerEl.innerHTML = ''; }, 300);
-                }
+            state.bannerTimeout = setTimeout(function() {
+                dismissBanner();
             }, 5000);
+        }
+
+        function dismissBanner() {
+            if (state.bannerTimeout) {
+                clearTimeout(state.bannerTimeout);
+                state.bannerTimeout = null;
+            }
+            var bannerEl = document.getElementById('banner');
+            var banner = bannerEl.querySelector('div');
+            if (banner) {
+                banner.classList.remove('banner-enter');
+                banner.classList.add('banner-exit');
+                setTimeout(function() { bannerEl.innerHTML = ''; }, 300);
+            }
         }
 
         function updateStats(won, guessCount) {
@@ -337,7 +350,7 @@
             if (state.showInstructions) {
                 modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">' +
-                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">How to Play Wordeu</h2>' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">How to Play Wordo</h2>' +
                     '<div class="space-y-4 text-gray-700">' +
                     '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span><p>Each player picks a secret 5-letter word with <strong>unique letters</strong></p></div>' +
                     '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span><p>Take turns guessing your opponent\'s word</p></div>' +
@@ -402,7 +415,7 @@
                       '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition">Join Game</button></div>';
                 
                 app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
-                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2">Wordeu</h1>' +
+                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">Wordo</h1>' +
                     '<div class="flex justify-center gap-4 mb-6">' +
                     '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">How to Play</button>' +
                     '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">Your Stats</button></div>' +
@@ -488,16 +501,21 @@
             }
 
             var gameEndContent = '';
+            var gameEndBanner = '';
             if (myPlayer.won) {
-                gameEndContent = '<div class="bg-green-500 rounded-2xl shadow-2xl p-6 text-center">' +
-                    '<h2 class="text-3xl font-bold text-white mb-2">You Won! 🎉</h2>' +
-                    '<p class="text-lg text-white mb-4">Guessed in ' + myPlayer.guesses.length + ' tries!</p>' +
-                    '<button onclick="startRematch()" class="bg-white text-green-600 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button></div>';
+                gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 shadow-lg z-50">' +
+                    '<div class="max-w-2xl mx-auto text-center">' +
+                    '<h2 class="text-2xl font-bold mb-1">You Won! 🎉</h2>' +
+                    '<p class="text-sm mb-3">Guessed in ' + myPlayer.guesses.length + ' tries!</p>' +
+                    '<button onclick="startRematch()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button>' +
+                    '</div></div>';
             } else if (opponent && opponent.won) {
-                gameEndContent = '<div class="bg-red-500 rounded-2xl shadow-2xl p-6 text-center">' +
-                    '<h2 class="text-3xl font-bold text-white mb-2">You Lost</h2>' +
-                    '<p class="text-lg text-white mb-4">' + opponent.name + ' won!</p>' +
-                    '<button onclick="startRematch()" class="bg-white text-red-600 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button></div>';
+                gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 shadow-lg z-50">' +
+                    '<div class="max-w-2xl mx-auto text-center">' +
+                    '<h2 class="text-2xl font-bold mb-1">You Lost</h2>' +
+                    '<p class="text-sm mb-3">' + opponent.name + ' guessed your word!</p>' +
+                    '<button onclick="startRematch()" class="bg-white text-red-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button>' +
+                    '</div></div>';
             } else if (!state.gameState.started) {
                 gameEndContent = '<div class="bg-white rounded-2xl shadow-2xl p-4 text-center"><p class="text-gray-600">Waiting for opponent...</p></div>';
             }
@@ -528,9 +546,9 @@
                 }
             }
 
-            app.innerHTML = '<div class="max-w-2xl mx-auto p-2"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
+            app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                 '<div class="flex items-center justify-between mb-3">' +
-                '<h1 class="text-2xl font-bold text-gray-800">Wordeu</h1>' +
+                '<h1 class="text-2xl font-bold text-gray-800 logo-font">Wordo</h1>' +
                 '<div class="flex items-center gap-2">' +
                 '<button onclick="state.showStats = true; render()" class="p-1 hover:bg-gray-100 rounded-lg" title="Stats"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></button>' +
                 '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">' + state.gameId + '</div>' +
