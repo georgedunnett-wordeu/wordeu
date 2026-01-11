@@ -262,21 +262,29 @@
         }
 
         function shareGame(url) {
+            var text = 'Join my Wordo game! ' + url;
             if (navigator.share) {
-                navigator.share({ title: 'Join my Wordo game!', text: 'I challenge you to a game of Wordo!', url: url })
+                navigator.share({ text: text })
                 .then(function() { state.showShareModal = false; render(); })
-                .catch(function(err) { console.log('Share cancelled:', err); });
-            } else {
-                navigator.clipboard.writeText(url).then(function() {
-                    state.message = 'Link copied to clipboard!';
-                    state.showShareModal = false;
-                    render();
-                }).catch(function() {
-                    prompt('Copy this link to share:', url);
-                    state.showShareModal = false;
-                    render();
+                .catch(function(err) { 
+                    // If share fails or cancelled, fall back to clipboard
+                    copyToClipboard(url);
                 });
+            } else {
+                copyToClipboard(url);
             }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                state.message = 'Link copied to clipboard!';
+                state.showShareModal = false;
+                render();
+            }).catch(function() {
+                prompt('Copy this link to share:', text);
+                state.showShareModal = false;
+                render();
+            });
         }
 
         function checkUrlForGame() {
@@ -533,10 +541,90 @@
         }
 
         function startRematch() {
-            // Get opponent info before clearing
+            // Get current game info for rematch
+            var currentGameId = state.gameId;
             var opponentId = state.gameState ? Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; }) : null;
             var opponentName = opponentId && state.gameState.players[opponentId] ? state.gameState.players[opponentId].name : null;
             
+            // Check if there's already a rematch game created by opponent
+            if (state.gameState && state.gameState.rematchGameId) {
+                // Join the existing rematch game
+                var rematchId = state.gameState.rematchGameId;
+                database.ref('games/' + state.gameId).off('value');
+                clearActiveGame();
+                state.gameState = null;
+                state.myWord = '';
+                state.currentGuess = '';
+                state.message = '';
+                state.confirmedLetters = [];
+                state.lastOpponentGuessCount = 0;
+                state.lastGameResult = null;
+                state.gameId = rematchId;
+                
+                // Join the rematch game
+                database.ref('games/' + rematchId).once('value').then(function(snapshot) {
+                    if (snapshot.exists()) {
+                        var game = snapshot.val();
+                        if (!game.players[state.playerId]) {
+                            // Add ourselves to the rematch game
+                            database.ref('games/' + rematchId + '/players/' + state.playerId).set({
+                                name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
+                                guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
+                            }).then(function() {
+                                saveActiveGame(rematchId, state.playerId);
+                                listenToGame(rematchId);
+                                window.history.pushState({}, '', '?game=' + rematchId);
+                            });
+                        } else {
+                            // Already in game, just listen
+                            saveActiveGame(rematchId, state.playerId);
+                            listenToGame(rematchId);
+                            window.history.pushState({}, '', '?game=' + rematchId);
+                        }
+                    }
+                });
+                return;
+            }
+            
+            // Create new rematch game and store ID in old game
+            var newGameId = Math.random().toString(36).substr(2, 6).toUpperCase();
+            var gameData = { 
+                players: {}, 
+                currentTurn: null, 
+                started: false, 
+                createdAt: Date.now(), 
+                gameOver: false,
+                isRematch: true,
+                previousGameId: currentGameId
+            };
+            gameData.players[state.playerId] = {
+                name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
+                guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
+            };
+            
+            // Create new game and update old game with rematch ID
+            database.ref('games/' + newGameId).set(gameData).then(function() {
+                // Store rematch game ID in old game so opponent can find it
+                database.ref('games/' + currentGameId + '/rematchGameId').set(newGameId);
+                
+                database.ref('games/' + currentGameId).off('value');
+                clearActiveGame();
+                state.gameState = null;
+                state.myWord = '';
+                state.currentGuess = '';
+                state.confirmedLetters = [];
+                state.lastOpponentGuessCount = 0;
+                state.lastGameResult = null;
+                state.gameId = newGameId;
+                state.message = opponentName ? 'Rematch created! Waiting for ' + opponentName + '...' : '';
+                saveActiveGame(newGameId, state.playerId);
+                listenToGame(newGameId);
+                window.history.pushState({}, '', '?game=' + newGameId);
+                render();
+            });
+        }
+
+        function cancelGame() {
             database.ref('games/' + state.gameId).off('value');
             clearActiveGame();
             state.gameState = null;
@@ -545,43 +633,9 @@
             state.message = '';
             state.confirmedLetters = [];
             state.lastOpponentGuessCount = 0;
-            state.lastGameResult = null;
-            window.history.pushState({}, '', window.location.pathname);
             state.gameId = '';
-            
-            // If we had an opponent, create a rematch game immediately
-            if (opponentName) {
-                state.message = 'Creating rematch... Share with ' + opponentName + '!';
-                render();
-                
-                // Create new game
-                var gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
-                var gameData = { 
-                    players: {}, 
-                    currentTurn: null, 
-                    started: false, 
-                    createdAt: Date.now(), 
-                    gameOver: false,
-                    isRematch: true,
-                    previousOpponent: opponentName
-                };
-                gameData.players[state.playerId] = {
-                    name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
-                    guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
-                };
-                database.ref('games/' + gameId).set(gameData).then(function() {
-                    state.gameId = gameId;
-                    state.showShareModal = true;
-                    state.message = 'Rematch ready! Share with ' + opponentName;
-                    state.lastOpponentGuessCount = 0;
-                    saveActiveGame(gameId, state.playerId);
-                    listenToGame(gameId);
-                    window.history.pushState({}, '', '?game=' + gameId);
-                    render();
-                });
-            } else {
-                render();
-            }
+            window.history.pushState({}, '', window.location.pathname);
+            render();
         }
 
         function shareResult() {
@@ -592,12 +646,16 @@
                 : '😅 ' + result.opponent + ' beat me at Wordo!\n\nThink you can do better? Play at 5letters.fun';
             
             if (navigator.share) {
-                navigator.share({ title: 'Wordo Result', text: text, url: 'https://5letters.fun' })
+                // On mobile, use share API with just text (URL in text already)
+                navigator.share({ text: text })
                     .catch(function(e) { console.log('Share cancelled'); });
             } else {
+                // On desktop, copy to clipboard
                 navigator.clipboard.writeText(text).then(function() {
                     state.message = 'Result copied to clipboard!';
                     render();
+                }).catch(function() {
+                    prompt('Copy this to share:', text);
                 });
             }
         }
@@ -755,7 +813,10 @@
                     statusHtml = '<div class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg text-center">' +
                         '<p class="font-semibold mb-2">⏳ Waiting for opponent...</p>' +
                         '<p class="text-sm mb-3">Code: <span class="font-bold">' + state.gameId + '</span></p>' +
-                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Share Invite</button></div>';
+                        '<div class="flex gap-2 justify-center">' +
+                        '<button onclick="shareGame(\'' + gameUrl + '\')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Share Invite</button>' +
+                        '<button onclick="cancelGame()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Cancel</button>' +
+                        '</div></div>';
                 } else if (opponent && !opponent.wordSet) {
                     statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + '...</div>';
                 } else if (opponent && opponent.wordSet) {
