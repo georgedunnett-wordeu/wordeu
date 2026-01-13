@@ -718,7 +718,8 @@
                                 won: true,
                                 guesses: myPlayer.guesses.length,
                                 myWord: myPlayer.word,
-                                theirWord: opponent ? opponent.word : ''
+                                theirWord: opponent ? opponent.word : '',
+                                guessData: myPlayer.guesses.slice(-3)
                             };
                             saveGameToHistory(gameRecord);
                             state.lastGameResult = gameRecord;
@@ -732,7 +733,8 @@
                                 won: false,
                                 guesses: myPlayer.guesses ? myPlayer.guesses.length : 0,
                                 myWord: myPlayer.word,
-                                theirWord: opponent ? opponent.word : ''
+                                theirWord: opponent ? opponent.word : '',
+                                guessData: myPlayer.guesses ? myPlayer.guesses.slice(-3) : []
                             };
                             saveGameToHistory(gameRecord);
                             state.lastGameResult = gameRecord;
@@ -958,7 +960,8 @@
                         won: true,
                         guesses: state.singlePlayer.guesses.length,
                         myWord: '-',
-                        theirWord: secretWord
+                        theirWord: secretWord,
+                        guessData: state.singlePlayer.guesses.slice(-3) // Last 3 guesses for sharing
                     };
                     saveGameToHistory(gameRecord);
                     updateStats(true, state.singlePlayer.guesses.length);
@@ -1013,7 +1016,8 @@
                 won: false,
                 guesses: state.singlePlayer.guesses.length,
                 myWord: '-',
-                theirWord: state.singlePlayer.secretWord
+                theirWord: state.singlePlayer.secretWord,
+                guessData: state.singlePlayer.guesses.slice(-3)
             };
             saveGameToHistory(gameRecord);
             updateStats(false, 0);
@@ -1025,9 +1029,37 @@
         function shareResult() {
             if (!state.lastGameResult) return;
             var result = state.lastGameResult;
-            var text = result.won 
-                ? '🎉 I beat ' + result.opponent + ' at 5letters in ' + result.guesses + ' guesses!\n\nCan you beat me? Play at 5letters.fun'
-                : '😅 ' + result.opponent + ' beat me at 5letters!\n\nThink you can do better? Play at 5letters.fun';
+            
+            // Build grid with letters for last 3 guesses (red/green like in-game alphabet)
+            var guessGrid = '';
+            if (result.guessData && result.guessData.length > 0) {
+                var secretWord = result.theirWord;
+                result.guessData.forEach(function(guess, idx) {
+                    var isLastGuess = (idx === result.guessData.length - 1) && result.won;
+                    var line = '';
+                    for (var i = 0; i < guess.word.length; i++) {
+                        var letter = guess.word[i];
+                        if (isLastGuess) {
+                            // Winning guess - all green
+                            line += '🟩';
+                        } else if (secretWord.indexOf(letter) !== -1) {
+                            // Letter is in the word - green
+                            line += '🟩';
+                        } else {
+                            // Letter not in word - red
+                            line += '🟥';
+                        }
+                    }
+                    guessGrid += guess.word + ' ' + line + ' ' + guess.matches + '\n';
+                });
+            }
+            
+            var opponentText = result.opponent === 'Computer' ? '' : ' against ' + result.opponent;
+            var header = result.won 
+                ? '🎉 I won at 5letters in ' + result.guesses + ' guesses' + opponentText + '!'
+                : '😅 I lost at 5letters after ' + result.guesses + ' guesses' + opponentText;
+            
+            var text = header + '\n\n' + guessGrid + '\nPlay at 5letters.fun';
             
             if (navigator.share) {
                 // On mobile, use share API with just text (URL in text already)
