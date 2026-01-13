@@ -40,6 +40,377 @@
     <div id="banner"></div>
     <div id="confetti"></div>
     <script>
+        // ==================== TRANSLATIONS ====================
+        var translations = {
+            en: {
+                logoText: '5letters', title: '5letters - Word Guessing Game',
+                howToPlay: 'How to Play', yourStats: 'Your Stats', playNow: 'Play Now',
+                twoPlayerStart: '2-Player Start', joinTwoPlayer: 'Join 2-Player Game',
+                namePlaceholder: 'Your name (optional)', gameCodePlaceholder: 'Enter Game Code',
+                joinGame: 'Join Game', gameCreated: 'Game Created!', code: 'Code',
+                shareInviteLink: 'Share Invite Link', continue: 'Continue', cancel: 'Cancel',
+                close: 'Close', chooseSecretWord: 'Choose Your Secret Word',
+                pickWord: 'Pick a 5-letter word with unique letters',
+                secretWordPlaceholder: 'Your secret word', setWord: 'Set Word',
+                waitingForOpponent: 'Waiting for opponent...', shareInvite: 'Share Invite',
+                settingWord: 'to set their word...', isReady: 'is ready! Set your word.',
+                backToHome: '← Back to Home', guessMustBe5: 'Guess must be exactly 5 letters',
+                wordMustBe5: 'Word must be exactly 5 letters', uniqueLetters: 'All letters must be unique',
+                notValidWord: 'Not a valid word', waitingFor: 'Waiting for', youWon: 'You Won!',
+                gameNotFound: 'Game not found', rejoinedGame: 'Rejoined game', gameIsFull: 'Game is full',
+                joinedGame: 'Joined game! Choose your secret word.',
+                wordSet: 'Word set! Waiting for game to start...',
+                enterName: 'Please enter your name', noGuessesYet: 'No guesses yet',
+                yourGuesses: 'Your Guesses:', enterGuess: 'Enter guess',
+                typeGuessHere: 'Type your guess here', yourTurn: 'Your turn!', guesses: 'guesses',
+                giveUp: 'Give up & reveal word', guessedIn: 'Guessed in', tries: 'tries!',
+                theWordWas: 'The word was', shareResult: 'Share Result', share: 'Share',
+                rematch: 'Rematch', playAgain: 'Play Again', tryAgain: 'Try Again', home: 'Home',
+                gameOver: 'Game Over', guessedYourWord: 'guessed your word!',
+                copied: 'Result copied to clipboard!', copyToShare: 'Copy this to share:',
+                max5Letters: 'Maximum 5 letters', stats: 'Stats', gamesPlayed: 'Games Played',
+                winRate: 'Win Rate', currentStreak: 'Current Streak', bestStreak: 'Best Streak',
+                avgGuesses: 'Avg Guesses/Win', quickestWin: 'Quickest Win',
+                viewHistory: 'View Game History', gameHistory: 'Game History',
+                noGamesYet: 'No games yet', wonIn: 'Won in', lost: 'Lost',
+                yourWord: 'Your word:', theirWord: 'Their word:', quitGame: 'Quit Game?',
+                quitConfirm: 'Are you sure? Your progress will be lost.', quit: 'Quit',
+                howToPlayTitle: 'How to Play 5letters',
+                rule1: 'Each player picks a secret 5-letter word with <strong>unique letters</strong>',
+                rule2: 'Take turns guessing your opponent\'s word',
+                rule3: 'After each guess, see how many letters match (but not which ones!)',
+                rule4: 'First to guess the opponent\'s word wins!', tips: 'Tips:',
+                tip1: '<strong>Click</strong> a letter to exclude it (red)',
+                tip2: '<strong>Long press</strong> a letter to include it (green)', gotIt: 'Got it!',
+                hintStart: '👇 <strong>Start here!</strong> Type any 5-letter word with unique letters in the box below and tap "Go" to make your first guess.',
+                hintFirstGuess: '💡 <strong>The number shows how many of YOUR letters appear in the secret word</strong> — but not which ones! Use logic to narrow it down.',
+                hintAlphabet: '💡 <strong>Red and green are YOUR notes</strong> — click letters to mark them as ruled out (red), or long-press to mark as definitely in the word (green). The game doesn\'t tell you which letters match!',
+                hintGoal: '🎯 <strong>Goal:</strong> Guess the secret word in as few tries as possible! Each guess tells you how many letters match.',
+                shareWon: '🎉 I won at 5letters in {n} guesses{opponent}!',
+                shareLost: '😅 I lost at 5letters after {n} guesses{opponent}',
+                against: ' against ', opponentGuessed: ' guessed: ',
+                lettersMatching: 'Letters matching your word: ', hits: 'hits',
+                yourTurnNow: '⚡ Your turn now!', tapToDismiss: 'Tap to dismiss', none: 'None',
+                copyright: 'Copyright 2026 5letters.fun', shareGameText: 'Join my 5letters game! ',
+                go: 'Go'
+            },
+            de: {
+                logoText: '5Buchstaben', title: '5Buchstaben - Wort-Ratespiel',
+                howToPlay: 'So geht\'s', yourStats: 'Deine Statistik', playNow: 'Jetzt spielen',
+                twoPlayerStart: '2-Spieler starten', joinTwoPlayer: '2-Spieler beitreten',
+                namePlaceholder: 'Dein Name (optional)', gameCodePlaceholder: 'Spielcode eingeben',
+                joinGame: 'Spiel beitreten', gameCreated: 'Spiel erstellt!', code: 'Code',
+                shareInviteLink: 'Einladungslink teilen', continue: 'Weiter', cancel: 'Abbrechen',
+                close: 'Schließen', chooseSecretWord: 'Wähle dein geheimes Wort',
+                pickWord: 'Wähle ein 5-Buchstaben-Wort mit einzigartigen Buchstaben',
+                secretWordPlaceholder: 'Dein geheimes Wort', setWord: 'Wort setzen',
+                waitingForOpponent: 'Warte auf Gegner...', shareInvite: 'Einladung teilen',
+                settingWord: 'setzt sein Wort...', isReady: 'ist bereit! Setze dein Wort.',
+                backToHome: '← Zurück zur Startseite',
+                guessMustBe5: 'Versuch muss genau 5 Buchstaben haben',
+                wordMustBe5: 'Wort muss genau 5 Buchstaben haben',
+                uniqueLetters: 'Alle Buchstaben müssen einzigartig sein',
+                notValidWord: 'Kein gültiges Wort', waitingFor: 'Warte auf', youWon: 'Gewonnen!',
+                gameNotFound: 'Spiel nicht gefunden', rejoinedGame: 'Spiel wieder beigetreten',
+                gameIsFull: 'Spiel ist voll', joinedGame: 'Beigetreten! Wähle dein geheimes Wort.',
+                wordSet: 'Wort gesetzt! Warte auf Spielstart...',
+                enterName: 'Bitte gib deinen Namen ein', noGuessesYet: 'Noch keine Versuche',
+                yourGuesses: 'Deine Versuche:', enterGuess: 'Versuch eingeben',
+                typeGuessHere: 'Gib deinen Versuch ein', yourTurn: 'Du bist dran!',
+                guesses: 'Versuche', giveUp: 'Aufgeben & Wort zeigen', guessedIn: 'Erraten in',
+                tries: 'Versuchen!', theWordWas: 'Das Wort war', shareResult: 'Ergebnis teilen',
+                share: 'Teilen', rematch: 'Revanche', playAgain: 'Nochmal spielen',
+                tryAgain: 'Nochmal versuchen', home: 'Startseite', gameOver: 'Spiel vorbei',
+                guessedYourWord: 'hat dein Wort erraten!',
+                copied: 'Ergebnis in Zwischenablage kopiert!',
+                copyToShare: 'Kopiere dies zum Teilen:', max5Letters: 'Maximal 5 Buchstaben',
+                stats: 'Statistik', gamesPlayed: 'Spiele gespielt', winRate: 'Gewinnrate',
+                currentStreak: 'Aktuelle Serie', bestStreak: 'Beste Serie',
+                avgGuesses: 'Ø Versuche/Sieg', quickestWin: 'Schnellster Sieg',
+                viewHistory: 'Spielverlauf anzeigen', gameHistory: 'Spielverlauf',
+                noGamesYet: 'Noch keine Spiele', wonIn: 'Gewonnen in', lost: 'Verloren',
+                yourWord: 'Dein Wort:', theirWord: 'Deren Wort:', quitGame: 'Spiel beenden?',
+                quitConfirm: 'Bist du sicher? Dein Fortschritt geht verloren.', quit: 'Beenden',
+                howToPlayTitle: 'So spielst du 5Buchstaben',
+                rule1: 'Jeder Spieler wählt ein geheimes 5-Buchstaben-Wort mit <strong>einzigartigen Buchstaben</strong>',
+                rule2: 'Ratet abwechselnd das Wort des Gegners',
+                rule3: 'Nach jedem Versuch siehst du, wie viele Buchstaben übereinstimmen (aber nicht welche!)',
+                rule4: 'Wer zuerst das Wort des Gegners errät, gewinnt!', tips: 'Tipps:',
+                tip1: '<strong>Klicke</strong> einen Buchstaben zum Ausschließen (rot)',
+                tip2: '<strong>Lang drücken</strong> um ihn einzuschließen (grün)', gotIt: 'Verstanden!',
+                hintStart: '👇 <strong>Hier starten!</strong> Gib ein 5-Buchstaben-Wort mit einzigartigen Buchstaben ein und tippe auf "Los" für deinen ersten Versuch.',
+                hintFirstGuess: '💡 <strong>Die Zahl zeigt, wie viele DEINER Buchstaben im geheimen Wort vorkommen</strong> — aber nicht welche! Nutze Logik zum Eingrenzen.',
+                hintAlphabet: '💡 <strong>Rot und grün sind DEINE Notizen</strong> — klicke Buchstaben zum Ausschließen (rot), oder lang drücken zum Einschließen (grün). Das Spiel zeigt nicht, welche Buchstaben übereinstimmen!',
+                hintGoal: '🎯 <strong>Ziel:</strong> Errate das geheime Wort in so wenigen Versuchen wie möglich! Jeder Versuch zeigt dir, wie viele Buchstaben übereinstimmen.',
+                shareWon: '🎉 Ich habe bei 5Buchstaben in {n} Versuchen gewonnen{opponent}!',
+                shareLost: '😅 Ich habe bei 5Buchstaben nach {n} Versuchen verloren{opponent}',
+                against: ' gegen ', opponentGuessed: ' hat geraten: ',
+                lettersMatching: 'Buchstaben in deinem Wort: ', hits: 'Treffer',
+                yourTurnNow: '⚡ Du bist dran!', tapToDismiss: 'Tippen zum Schließen', none: 'Keine',
+                copyright: 'Copyright 2026 5letters.fun', shareGameText: 'Spiel mit mir 5Buchstaben! ',
+                go: 'Los'
+            }
+        };
+
+        // Language-specific word lists
+        var wordLists = {
+            en: [
+                'ABOUT','ABOVE','ABUSE','ACUTE','ADEPT','ADMIT','ADOPT','ADULT','AGENT','AGILE',
+                'ALARM','ALBUM','ALIEN','ALIGN','AMBER','AMUSE','ANGEL','ANGER','ANGLE','ANKLE',
+                'APART','ARGUE','ARISE','ARMED','AROMA','ASIDE','ASKED','ATLAS','AUDIO','BADGE',
+                'BADLY','BAKED','BASIN','BATCH','BEACH','BEADS','BEARD','BEAST','BEGAN','BEING',
+                'BELOW','BENCH','BIRCH','BLACK','BLADE','BLAME','BLAND','BLANK','BLAST','BLAZE',
+                'BLEND','BLIND','BLOCK','BLOND','BLOWN','BLUES','BLUNT','BOARD','BOAST','BONED',
+                'BONUS','BOUGH','BOUND','BRACE','BRAIN','BRAKE','BRAND','BRAVO','BREAD','BREAK',
+                'BRICK','BRIDE','BRING','BRISK','BROAD','BROKE','BRUNT','BRUSH','BRUTE','BUILD',
+                'BUILT','BUNCH','BURST','CABLE','CADET','CAMEL','CANDY','CANOE','CAPER','CARVE',
+                'CAUSE','CEDAR','CHAIN','CHAIR','CHALK','CHAMP','CHANT','CHARM','CHASE','CHEAP',
+                'CHEST','CHILD','CHIME','CHINA','CHIRP','CHOMP','CHORD','CHOSE','CHUNK','CIGAR',
+                'CLAIM','CLAMP','CLANG','CLANK','CLASH','CLASP','CLEAN','CLEAR','CLIMB','CLING',
+                'CLOAK','CLONE','CLOTH','CLOUD','CLOUT','CLOWN','CLUBS','CLUMP','CLUNG','COACH',
+                'COAST','COBRA','COMET','CORAL','COUCH','COUGH','COULD','COUNT','COURT','COVER',
+                'CRAFT','CRAMP','CRANE','CRANK','CRASH','CRAWL','CRAZY','CREAM','CREST','CRISP',
+                'CROWD','CROWN','CRUDE','CRUEL','CRUSH','CRUST','CURLY','DAILY','DAIRY','DAISY',
+                'DANCE','DEALT','DEATH','DECAL','DECAY','DELTA','DEMON','DEPOT','DEPTH','DIARY',
+                'DINER','DIRTY','DISCO','DOUBT','DOUGH','DRAFT','DRAIN','DRAKE','DRANK','DRAPE',
+                'DRAWN','DREAD','DREAM','DRIFT','DRINK','DRIVE','DROWN','DRUMS','DRUNK','DUSTY',
+                'DWARF','DYING','EAGER','EARLY','EARTH','EBONY','EIGHT','ELBOW','EMPTY','ENJOY',
+                'ENTRY','EPOCH','EQUIP','ERUPT','EVICT','EXACT','FABLE','FACTS','FAINT','FAIRY',
+                'FAITH','FALSE','FANCY','FARCE','FAULT','FAUNA','FEAST','FEATS','FIBER','FIELD',
+                'FIEND','FIERY','FIFTY','FIGHT','FILTH','FINAL','FINCH','FIRED','FIRST','FIXED',
+                'FJORD','FLAIR','FLAKE','FLAME','FLANK','FLARE','FLASH','FLASK','FLESH','FLICK',
+                'FLING','FLINT','FLOAT','FLOCK','FLOOD','FLORA','FLOUT','FLUID','FLUKE','FLUNG',
+                'FLUSH','FOCAL','FORCE','FORGE','FORTH','FORTY','FORUM','FOUND','FOYER','FRAIL',
+                'FRAME','FRANK','FRAUD','FREAK','FRESH','FRIED','FROCK','FRONT','FROST','FRUIT',
+                'FUDGE','FUNGI','GHOST','GIANT','GIVEN','GLAND','GLARE','GLEAM','GLIDE','GLOBE',
+                'GLORY','GLOVE','GLYPH','GNOME','GOATS','GODLY','GOING','GRACE','GRADE','GRAIN',
+                'GRAND','GRAPE','GRASP','GRAVE','GRAVY','GRAZE','GREAT','GREED','GRIND','GROAN',
+                'GROIN','GROOM','GROUP','GROVE','GROWL','GROWN','GUARD','GUEST','GUIDE','GUILD',
+                'GUILT','GUISE','HABIT','HANDY','HARDY','HARSH','HASTE','HASTY','HATCH','HAUNT',
+                'HAVEN','HAZEL','HEADS','HEARD','HEART','HEAVY','HEDGE','HEIST','HELPS','HENCE',
+                'HERBS','HINGE','HITCH','HOARD','HOBBY','HOIST','HONEY','HORSE','HOTEL','HOUND',
+                'HOURS','HOUSE','HUMAN','HUMID','HUSKY','IDEAL','IMAGE','IMPLY','INDEX','INEPT',
+                'INGOT','INPUT','INTRO','IRONY','IVORY','JAUNT','JEANS','JEWEL','JOINT','JOKER',
+                'JOLLY','JOUST','JUDGE','JUICE','JUICY','JUMBO','JUMPS','KAYAK','KNIFE','KNOCK',
+                'KNOTS','KNOWN','LABEL','LABOR','LACED','LADEN','LADLE','LAGER','LANCE','LAPSE',
+                'LARGE','LARVA','LASER','LATCH','LATER','LATHE','LAUGH','LAYER','LEACH','LEADS',
+                'LEAPT','LEARN','LEASE','LEASH','LEAST','LEAVE','LEDGE','LEGAL','LEMON','LIGHT',
+                'LIMBO','LIMBS','LIMIT','LINED','LINEN','LINER','LINES','LINKS','LIONS','LITER',
+                'LIVER','LOADS','LOAFS','LOANS','LOFTY','LOGIC','LONER','LOOPS','LORDS','LOSER',
+                'LOTUS','LOUSE','LOUSY','LOVED','LOVER','LOWER','LUCID','LUCKY','LUMEN','LUMPS',
+                'LUNAR','LUNCH','LUNGE','LURCH','LURKS','LYING','LYRIC','MACHO','MAGIC','MAJOR',
+                'MAKER','MANGO','MANLY','MANOR','MAPLE','MARCH','MARSH','MATCH','MAYBE','MAYOR',
+                'MEANS','MEATS','MEDAL','MEDIA','MELON','MERCY','MERGE','MERIT','METAL','MICRO',
+                'MIDST','MIGHT','MILES','MILKY','MINCE','MINDS','MINED','MINER','MINOR','MINTY',
+                'MINUS','MIRTH','MISTY','MIXED','MODEL','MOIST','MOLDS','MONEY','MONTH','MOODY',
+                'MORAL','MOUND','MOUNT','MOURN','MOUSE','MOUTH','MOVED','MOVER','MOVIE','MULCH',
+                'MUNCH','MURAL','MURKY','MUSHY','MUSIC','MUSKY','MYTHS','NAILS','NAIVE','NAMED',
+                'NAMES','NASTY','NAVAL','NAVEL','NERDY','NERVE','NEWLY','NIGHT','NINJA','NINTH',
+                'NOBLE','NOBLY','NOISY','NORTH','NOTCH','NOTED','NOVEL','NUDGE','NURSE','OCCUR',
+                'OCEAN','OFTEN','OLIVE','ONSET','OPERA','OPTIC','ORBIT','ORDER','ORGAN','OTHER',
+                'OTTER','OUGHT','OUNCE','OUTER','OWNED','OWNER','OXIDE','OZONE','PACED','PAINT',
+                'PAIRS','PANDA','PANEL','PANIC','PANTS','PAPER','PARTY','PASTE','PATCH','PATIO',
+                'PAUSE','PEACH','PEARL','PEDAL','PERCH','PERIL','PERKY','PETAL','PHASE','PHONE',
+                'PHOTO','PIANO','PICKY','PIECE','PILOT','PINCH','PINTS','PIPER','PITCH','PITHY',
+                'PIVOT','PIXEL','PLACE','PLAID','PLAIN','PLANE','PLANK','PLANT','PLATE','PLAZA',
+                'PLEAD','PLEAT','PLODS','PLUCK','PLUGS','PLUMB','PLUME','PLUMP','PLUMS','PLUNK',
+                'PLUSH','POACH','POEMS','POINT','POISE','POLAR','PONDS','PORCH','PORES','PORTS',
+                'POSED','POUCH','POUND','POWER','PRANK','PRAWN','PRESS','PRICE','PRIDE','PRIED',
+                'PRIME','PRINT','PRIOR','PRISM','PRIVY','PRIZE','PROBE','PRODS','PRONE','PRONG',
+                'PROSE','PROUD','PROVE','PROWL','PRUDE','PRUNE','PSALM','PULSE','PUNCH','PUNKS',
+                'PUNTS','PURGE','PUSHY','QUALM','QUART','QUERY','QUEST','QUICK','QUIET','QUILT',
+                'QUIRK','QUOTA','QUOTE','RABID','RACED','RACER','RADAR','RADIO','RADON','RAGED',
+                'RAIDS','RAILS','RAINY','RAISE','RALLY','RANCH','RANGE','RANTS','RAPID','RATIO',
+                'RAVEN','RAZOR','REACH','REACT','READS','READY','REALM','REAMS','RECAP','REGAL',
+                'REIGN','RELAX','RELAY','RELIC','REMIX','RENAL','REPAY','REPLY','RESIN','RETRO',
+                'RHINO','RHYME','RIDGE','RIFLE','RIGHT','RIGID','RIGOR','RINDS','RINGS','RINSE',
+                'RISEN','RISKY','RITZY','RIVAL','RIVEN','RIVER','ROADS','ROAMS','ROAST','ROBED',
+                'ROBES','ROBIN','ROBOT','ROCKS','ROCKY','RODEO','ROGUE','ROLES','ROMAN','ROOST',
+                'ROSES','ROUGE','ROUGH','ROUND','ROUSE','ROUTE','ROVER','ROWDY','ROYAL','RUGBY',
+                'RUINS','RULED','RULER','RUPEE','RURAL','RUSTY','SADLY','SAFER','SAINT','SALTY',
+                'SALVE','SANDY','SANER','SATIN','SAUCE','SAUCY','SAUNA','SAVOR','SCALD','SCALE',
+                'SCALP','SCAMP','SCANT','SCARE','SCARF','SCARY','SCENE','SCENT','SCONE','SCOOP',
+                'SCOPE','SCORE','SCORN','SCOUT','SCOWL','SCRAM','SCRAP','SCRUB','SEAMS','SEDAN',
+                'SEGUE','SEIZE','SENSE','SERUM','SERVE','SETUP','SEVEN','SHADE','SHADY','SHAFT',
+                'SHAKE','SHAKY','SHALE','SHAME','SHANK','SHAPE','SHARD','SHARE','SHARK','SHARP',
+                'SHAVE','SHAWL','SHEAR','SHELF','SHIFT','SHINE','SHINY','SHIRE','SHIRK','SHIRT',
+                'SHOCK','SHONE','SHORE','SHORN','SHORT','SHOUT','SHOVE','SHOWN','SHOWY','SHRUB',
+                'SHRUG','SHUCK','SHUNT','SIDED','SIEGE','SIGMA','SIGHT','SIGNS','SILKY','SINCE',
+                'SINGE','SIREN','SITED','SIXTH','SIXTY','SIZED','SKATE','SKEIN','SKIER','SKIMP',
+                'SKINS','SKIRT','SKULK','SKULL','SKUNK','SLACK','SLAIN','SLANG','SLANT','SLASH',
+                'SLATE','SLAVE','SLEEK','SLEPT','SLICE','SLIDE','SLIME','SLIMY','SLING','SLINK',
+                'SLOPE','SLOSH','SLOTH','SLUMP','SLUNG','SLUNK','SLURP','SMACK','SMALL','SMART',
+                'SMASH','SMEAR','SMELT','SMILE','SMIRK','SMITE','SMITH','SMOKE','SMOKY','SNACK',
+                'SNAIL','SNAKE','SNAKY','SNARE','SNARL','SNEAK','SNIDE','SNIFF','SNIPE','SNORE',
+                'SNORT','SNOUT','SNOWY','SNUCK','SOAPY','SOBER','SOCKS','SOGGY','SOLAR','SOLED',
+                'SOLID','SOLVE','SONIC','SORTS','SOULS','SOUND','SOUTH','SPACE','SPADE','SPARE',
+                'SPARK','SPAWN','SPEAK','SPEAR','SPECK','SPEND','SPENT','SPICE','SPICY','SPIED',
+                'SPIKE','SPIKY','SPILT','SPINE','SPINY','SPIRE','SPITE','SPLAT','SPLIT','SPOIL',
+                'SPOKE','SPORE','SPORT','SPOUT','SPRAY','SPRIG','SPUNK','SPURN','SQUAD','SQUID',
+                'STACK','STAFF','STAGE','STAID','STAIN','STAIR','STAKE','STALE','STALK','STAMP',
+                'STAND','STANK','STARK','STASH','STATE','STAVE','STEAK','STEAL','STEAM','STEEP',
+                'STERN','STICK','STIFF','STILL','STING','STINK','STINT','STOCK','STOIC','STOMP',
+                'STONE','STONY','STOOD','STOOL','STOOP','STORE','STORK','STORM','STORY','STOUT',
+                'STOVE','STRAP','STRAW','STRAY','STRIP','STRUM','STRUT','STUCK','STUDY','STUFF',
+                'STUMP','STUNG','STUNK','STUNT','STYLE','SUAVE','SUGAR','SUING','SUITE','SULKY',
+                'SUNNY','SUPER','SURGE','SWAMP','SWARM','SWEAR','SWEAT','SWEEP','SWELL','SWEPT',
+                'SWIFT','SWINE','SWING','SWIPE','SWIRL','SWORD','SWORE','SWORN','SWUNG','SYRUP',
+                'TABLE','TACKY','TAILS','TAKEN','TAKER','TALES','TALKS','TANGY','TANGO','TANKS',
+                'TARDY','TASTE','TASTY','TAUNT','TAXES','TEACH','TEAMS','TEARS','TEASE','TEMPO',
+                'TENDS','TENOR','TENSE','TENTH','TERMS','THANK','THEFT','THEIR','THEME','THERE',
+                'THESE','THICK','THIEF','THIGH','THING','THINK','THIRD','THORN','THOSE','THREE',
+                'THREW','THROB','THROW','THUDS','THUMB','THUMP','TIDAL','TIGER','TIGHT','TIMER',
+                'TIMES','TIPSY','TIRED','TITAN','TITLE','TOAST','TODAY','TONED','TONER','TONES',
+                'TONIC','TOOLS','TOPIC','TORCH','TORSO','TOTAL','TOUCH','TOUGH','TOURS','TOWEL',
+                'TOWER','TOWNS','TOXIC','TRACE','TRACK','TRACT','TRADE','TRAIL','TRAIN','TRAIT',
+                'TRAMP','TRASH','TRAWL','TREAD','TREAT','TREND','TRIAL','TRIBE','TRICK','TRIED',
+                'TRIKE','TRIMS','TRITE','TROLL','TROMP','TROOP','TROPE','TROTS','TROUT','TROVE',
+                'TRUCE','TRUCK','TRULY','TRUMP','TRUNK','TRUST','TRUTH','TULIP','TUMOR','TUNED',
+                'TUNER','TUNES','TUNIC','TURBO','TURNS','TUTOR','TWANG','TWEAK','TWEED','TWICE',
+                'TWIGS','TWINE','TWIRL','TWIST','TYING','TYPED','TYPES','ULTRA','UNCLE','UNCUT',
+                'UNDER','UNDID','UNDUE','UNFED','UNFIT','UNION','UNITE','UNITS','UNITY','UNLIT',
+                'UNMET','UNPIN','UNSET','UNTIE','UNTIL','UNWED','UNZIP','UPPER','UPSET','URBAN',
+                'URGED','URINE','USAGE','USHER','USING','USUAL','UTTER','VAGUE','VALET','VALID',
+                'VALOR','VALUE','VALVE','VAULT','VEINS','VENOM','VENUE','VERGE','VERSE','VIDEO',
+                'VIEWS','VIGIL','VIGOR','VIPER','VIRAL','VIRUS','VISIT','VISOR','VISTA','VITAL',
+                'VIVID','VIXEN','VOCAL','VODKA','VOGUE','VOICE','VOMIT','VOTED','VOTER','VOUCH',
+                'VOWED','VOWEL','WACKY','WAGED','WAGER','WAGES','WAGON','WAIST','WAKEN','WALKS',
+                'WALTZ','WANDS','WANTS','WARPS','WARTS','WARTY','WASTE','WATCH','WATER','WAVED',
+                'WAVER','WAVES','WAXEN','WEARY','WEAVE','WEDGE','WEEDS','WEIGH','WEIRD','WELLS',
+                'WETLY','WHACK','WHALE','WHARF','WHEAT','WHEEL','WHERE','WHICH','WHIFF','WHILE',
+                'WHIMS','WHINE','WHINY','WHIPS','WHIRL','WHISK','WHITE','WHOLE','WHOSE','WIDEN',
+                'WIDER','WIDOW','WIDTH','WIELD','WILES','WIMPY','WINCE','WINCH','WINDS','WINDY',
+                'WINES','WINGS','WINKS','WIPED','WIPER','WIRED','WIRES','WISER','WISPS','WISPY',
+                'WITCH','WITTY','WOKEN','WOMAN','WOODS','WORDY','WORKS','WORLD','WORMS','WORMY',
+                'WORSE','WORST','WORTH','WOULD','WOUND','WOVEN','WRATH','WREAK','WRECK','WREST',
+                'WRING','WRIST','WRITE','WRONG','WROTE','YACHT','YARDS','YARNS','YAWNS','YEARN',
+                'YEARS','YEAST','YIELD','YOUNG','YOURS','YOUTH','ZEBRA','ZESTY','ZILCH','ZONAL','ZONES'
+            ],
+            de: [
+                'ABEND','ADLER','AHORN','AMPEL','ANGST','APFEL','ARTIG','AUDIO','BANDE','BAUER',
+                'BERGE','BETON','BIEST','BIRKE','BLASE','BLECH','BLICK','BLIND','BLITZ','BLOND',
+                'BLUME','BODEN','BOHNE','BOXEN','BRAND','BRAUT','BRIEF','BRISE','BRUST','BUCHT',
+                'DAMPF','DANKE','DAUER','DEICH','DENKT','DICHT','DRAHT','DRANG','DRUCK','DUNST',
+                'DURCH','DURST','ECHTE','EIFER','EISEN','ENGEL','ENKEL','ERDIG','ERNST','ETWAS',
+                'FAHRT','FALKE','FARBE','FAUST','FEDER','FEIND','FELGE','FISCH','FLACH','FLECK',
+                'FLUCH','FLUID','FOKUS','FORMT','FOYER','FRAGT','FRANK','FRECH','FREMD','FROST',
+                'FUCHS','FUNKT','GABEL','GANZE','GEIST','GENIE','GLANZ','GLAUB','GNADE','GRABT',
+                'GREIS','GRENZ','GRUND','GRUFT','GUNST','GURKE','HACKT','HAFEN','HAKEN','HALTE',
+                'HANDY','HARFE','HAUPT','HEBEL','HECKE','HEILT','HILFE','HOBEL','HONIG','HORST',
+                'HOTEL','HUNDE','JACKE','JUBEL','JUNGE','KAMPF','KANAL','KANTE','KARTE','KAUFT',
+                'KEGEL','KEHRT','KERZE','KINDS','KLANG','KLAUT','KLEBT','KLEIN','KLIMA','KLUGE',
+                'KNABE','KNOPF','KOHLE','KOMBI','KRAFT','KRAUT','KREBS','KREIS','KREUZ','KRIEG',
+                'KRONE','KUGEL','KUNDE','KUNST','KURVE','LACHE','LACHS','LADEN','LAGER','LAMPE',
+                'LANGE','LASER','LAUBE','LAUFT','LAUNE','LEDER','LEHRT','LEINE','LEISE','LENKT',
+                'LETZT','LEUTE','LICHT','LIEBT','LIEGT','LIEST','LINDE','LINKS','LIPPE','LITER',
+                'LOBEN','LOCKT','LOGIK','LOHNT','LUDER','LUNCH','LUNGE','MACHT','MAGST','MAKEL',
+                'MALER','MANCH','MARKE','MARKT','MASKE','MAUER','MEINT','MEIST','MENGE','MERKT',
+                'MIETE','MILCH','MINZE','MOBIL','MODEL','MONAT','MULDE','MUSIK','NACHT','NADEL',
+                'NAGEL','NARBE','NATUR','NEBEL','NEHMT','NEIGT','NERVE','NICHT','NIMMT','NOBEL',
+                'NOTIZ','NUDEL','NUTZE','OHREN','OLIVE','OPFER','ORDEN','ORGEL','ORTEN','OSTEN',
+                'OZEAN','PAKET','PALME','PANDA','PANIK','PASTE','PAUSE','PEDAL','PEGEL','PERLE',
+                'PFAND','PFEIL','PFERD','PIANO','PILOT','PLAGE','PLANK','PLATZ','POREN','PREIS',
+                'PRINZ','PROBE','PROFI','PSALM','PUDER','PUMPE','PUNKT','QUALM','QUARK','RABEN',
+                'RACHE','RADAR','RAGEN','RAHMT','RAMPE','RANCH','RASCH','RASEN','RATEN','RAUBE',
+                'RAUCH','RECHT','REGAL','REGEN','REICH','REIFT','REIHE','REIST','REIZT','RENKT',
+                'RENTE','REVUE','RINGS','RITEN','RITZE','ROBEN','ROBOT','ROHES','ROMAN','ROSTE',
+                'ROUTE','RUBEL','RUDER','RUFEN','RUHIG','RUMPF','RUNDE','SACHE','SAGEN','SAHNE',
+                'SAITE','SALBE','SALON','SALUT','SAMEN','SANFT','SATIN','SAUCE','SAUGT','SCHAF',
+                'SCHAL','SCHEU','SECHS','SEGEL','SEGEN','SEHNT','SEIDE','SEIFE','SEILT','SEITE',
+                'SEKTE','SENKT','SETZT','SIEBT','SIEGT','SIEHE','SILBE','SINGE','SINKT','SITTE',
+                'SITZT','SKALA','SOCKE','SOHLE','SOLCH','SONDE','SORGE','SORGT','SPALT','SPART',
+                'SPECK','SPIEL','SPION','SPITZ','SPORT','SPURT','STADT','STAHL','STAMM','STAND',
+                'STANK','STARK','START','STAUB','STEAK','STEHT','STEIN','STERN','STETS','STICH',
+                'STIER','STIFT','STILL','STIRN','STOCK','STOFF','STOLZ','STROM','STUBE','STUCK',
+                'STUFE','STUHL','STUMM','STURM','SUCHE','SUCHT','SUMPF','SUPER','TAFEL','TALER',
+                'TANNE','TANTE','TANZE','TAUBE','TAUFE','TAUGT','TAXEN','TEICH','TEMPO','TENOR',
+                'TEUER','THEMA','THRON','TIERE','TIGER','TINTE','TISCH','TITEL','TOAST','TONNE',
+                'TOTAL','TREND','TRICK','TRITT','TROPF','TROST','TROTZ','TRUCK','TRUHE','TRUNK',
+                'TULPE','TUMOR','TURBO','TYPUS','UHREN','UMBAU','UMHER','UMWEG','UNART','UNION',
+                'UNRAT','UNTEN','UNTER','URBAN','VALID','VATER','VENUS','VERSO','VIERT','VILLA',
+                'VINYL','VIRUS','VITAL','VOGEL','VOKAL','VOLKS','VORAN','VORNE','WABEN','WACHE',
+                'WACHT','WADEN','WAGEN','WAHLT','WAHRE','WALKE','WANGE','WANKT','WARNT','WARTE',
+                'WARUM','WASCH','WATEN','WEBER','WECKT','WEDEL','WEHRT','WEICH','WEIDE','WEILT',
+                'WEISE','WEIST','WEITE','WELCH','WELKT','WENIG','WERBE','WERFT','WERKE','WESEN',
+                'WESPE','WESTE','WETTE','WIDER','WIDME','WIEGT','WIESE','WILDE','WILLE','WINDE',
+                'WINKE','WINKT','WIRBT','WIRFT','WIRKE','WIRST','WISCH','WITWE','WITZE','WOCHE',
+                'WODKA','WOHER','WOHIN','WOHLE','WOHNT','WOLFS','WOLKE','WOMIT','WORAN','WORTE',
+                'WORUM','WOVON','WRANG','WUCHS','WULST','WUNDE','WURMS','WURST','YACHT','ZACKE',
+                'ZAHNE','ZANGE','ZANKT','ZAPFT','ZARTE','ZAUNE','ZEBRA','ZECKE','ZEHEN','ZEHNT',
+                'ZEIGT','ZEILE','ZELLE','ZELTE','ZERRT','ZEUGE','ZIEGE','ZIEHT','ZIELS','ZIERT',
+                'ZINKE','ZINSE','ZIRKA','ZIVIL','ZOGEN','ZONEN','ZUCHT','ZUCKT','ZUDEM','ZUGEN',
+                'ZUMAL','ZUNGE','ZWANG','ZWECK','ZWEIG','ZWEIT','ZWIRN','ZWIST'
+            ]
+        };
+
+        // Language config
+        var langConfig = {
+            en: { alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), letterRegex: /^[A-Z]$/, sanitizeRegex: /[^A-Z]/g },
+            de: { alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ'.split(''), letterRegex: /^[A-ZÄÖÜ]$/, sanitizeRegex: /[^A-ZÄÖÜ]/g }
+        };
+
+        // Language management
+        function getStoredLang() { return localStorage.getItem('5letters_lang'); }
+        function setStoredLang(lang) { localStorage.setItem('5letters_lang', lang); }
+        function detectBrowserLang() {
+            var browserLang = navigator.language || navigator.userLanguage;
+            if (browserLang && browserLang.startsWith('de')) return 'de';
+            return 'en';
+        }
+        function getCurrentLang() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var urlLang = urlParams.get('lang');
+            if (urlLang && translations[urlLang]) { setStoredLang(urlLang); return urlLang; }
+            var stored = getStoredLang();
+            if (stored && translations[stored]) return stored;
+            return detectBrowserLang();
+        }
+        
+        var currentLang = getCurrentLang();
+        function t(key) { return translations[currentLang][key] || translations['en'][key] || key; }
+        function getLangConfig() { return langConfig[currentLang] || langConfig['en']; }
+        function getWordList() { return wordLists[currentLang] || wordLists['en']; }
+        function getAlphabet() { return getLangConfig().alphabet; }
+        
+        function switchLang(lang) {
+            if (translations[lang]) {
+                currentLang = lang;
+                setStoredLang(lang);
+                document.title = t('title');
+                render();
+            }
+        }
+
+        // Word validation with language support
+        function checkWord(word) {
+            if (currentLang === 'de') {
+                return fetch('https://de.wiktionary.org/w/api.php?action=query&titles=' + encodeURIComponent(word.toLowerCase()) + '&format=json&origin=*')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { var pages = data.query.pages; return Object.keys(pages)[0] !== '-1'; })
+                    .catch(function() { return true; });
+            }
+            return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
+                .then(function(r) { return r.ok; })
+                .catch(function() { return false; });
+        }
+
+        function hasUniqueLetters(word) {
+            var config = getLangConfig();
+            var letters = {};
+            for (var i = 0; i < word.length; i++) {
+                var char = word[i];
+                if (!config.letterRegex.test(char)) return false;
+                if (letters[char]) return false;
+                letters[char] = true;
+            }
+            return true;
+        }
+
+        function sanitizeWord(word) {
+            var config = getLangConfig();
+            return word.toUpperCase().replace(config.sanitizeRegex, '');
+        }
+
         // Sound effects using Web Audio API
         var audioCtx = null;
         function getAudioContext() {
@@ -330,205 +701,6 @@
             singlePlayer: null  // { secretWord, guesses[], letterStates{}, confirmedLetters[], gameOver, won }
         };
         
-        var ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-
-        // Word list for single player mode (common 5-letter words with unique letters)
-        var WORD_LIST = [
-            'ABOUT','ABOVE','ABUSE','ACUTE','ADEPT','ADMIT','ADOPT','ADULT','AGENT','AGILE',
-            'ALARM','ALBUM','ALIEN','ALIGN','AMBER','AMUSE','ANGEL','ANGER','ANGLE','ANKLE',
-            'APART','ARGUE','ARISE','ARMED','AROMA','ASIDE','ASKED','ASPIC','ATLAS','AUDIO',
-            'BADGE','BADLY','BAKED','BALDY','BASIN','BATCH','BEACH','BEADS','BEARD','BEAST',
-            'BEGAN','BEING','BELOW','BENCH','BIGOT','BIRCH','BLACK','BLADE','BLAME','BLAND',
-            'BLANK','BLAST','BLAZE','BLEAT','BLEND','BLIMP','BLIND','BLOCK','BLOKE','BLOND',
-            'BLOWN','BLUES','BLUNT','BOARD','BOAST','BONED','BONUS','BOTCH','BOUGH','BOUND',
-            'BRACE','BRAIN','BRAKE','BRAND','BRASH','BRAVO','BREAD','BREAK','BRICK','BRIDE',
-            'BRING','BRISK','BROAD','BROIL','BROKE','BRUNT','BRUSH','BRUTE','BUILD','BUILT',
-            'BUNCH','BURST','CABLE','CADET','CAMEL','CAMEO','CAMPS','CANDY','CANOE','CAPER',
-            'CAROM','CAUSE','CEDAR','CHAIR','CHALK','CHAMP','CHANT','CHARM','CHASE','CHEAP',
-            'CHEAT','CHEST','CHILD','CHIME','CHINA','CHIMP','CHIRP','CHOMP','CHORD','CHOSE',
-            'CHUNK','CIGAR','CINCH','CLAIM','CLAMP','CLANG','CLANK','CLASH','CLASP','CLEAN',
-            'CLEAR','CLIMB','CLING','CLOAK','CLONE','CLOTH','CLOUD','CLOUT','CLOWN','CLUBS',
-            'CLUED','CLUMP','CLUNG','COACH','COAST','COBRA','COILS','COLDS','COMET','COMFY',
-            'COMIC','CORAL','COUCH','COUGH','COULD','COUNT','COUPLE','COURT','COVER','CRAFT',
-            'CRAMP','CRANE','CRANK','CRASH','CRAWL','CRAZY','CREAM','CREST','CRISP','CROAK',
-            'CRONE','CROWD','CROWN','CRUDE','CRUEL','CRUSH','CRUST','CURLY','DAILY','DAIRY',
-            'DAISY','DANCE','DEALT','DEATH','DECAL','DECAY','DELTA','DEMON','DEPOT','DEPTH',
-            'DIARY','DINER','DIRTY','DISCO','DITCH','DOUBT','DOUGH','DRAFT','DRAIN','DRAKE',
-            'DRANK','DRAPE','DRAWN','DREAD','DREAM','DRESS','DRIFT','DRINK','DRIVE','DROIT',
-            'DROWN','DRUGS','DRUMS','DRUNK','DUSTY','DWARF','DYING','EAGER','EARLY','EARTH',
-            'EBONY','EDICT','EIGHT','ELBOW','EMILY','EMPTY','ENACT','ENJOY','ENTRY','EPOCH',
-            'EQUIP','ERUPT','EVICT','EXACT','EXAMS','EXULT','FABLE','FACTS','FAINT','FAIRY',
-            'FAITH','FALSE','FANCY','FARCE','FAULT','FAUNA','FEAST','FEATS','FETCH','FIELD',
-            'FIEND','FIERY','FIFTY','FIGHT','FILTH','FINAL','FINCH','FIRED','FIRST','FIXED',
-            'FJORD','FLACK','FLAIR','FLAKE','FLAME','FLANK','FLARE','FLASH','FLASK','FLAXY',
-            'FLESH','FLICK','FLING','FLINT','FLOAT','FLOCK','FLOOD','FLOOR','FLORA','FLOSS',
-            'FLOUT','FLOWN','FLUID','FLUKE','FLUNG','FLUNK','FLUSH','FLUTE','FOCAL','FOCUS',
-            'FOGEY','FOLKS','FORCE','FORGE','FORGO','FORMS','FORTH','FORTY','FORUM','FOSSIL',
-            'FOUND','FOYER','FRAIL','FRAME','FRANK','FRAUD','FREAK','FRESH','FRIED','FRIES',
-            'FROCK','FROGS','FRONT','FROST','FROWN','FROZE','FRUIT','FUDGE','FUNGI','FUNKY',
-            'GAMES','GAUDY','GAUGE','GAUNT','GAUZE','GAVEL','GENUS','GHOST','GIANT','GIVEN',
-            'GLAND','GLARE','GLEAM','GLEAN','GLIDE','GLINT','GLOBE','GLOOM','GLORY','GLOSS',
-            'GLOVE','GLUED','GLYPH','GNOME','GOALS','GOATS','GODLY','GOING','GOLEM','GONER',
-            'GRAFT','GRAIL','GRAIN','GRAND','GRANT','GRAPE','GRAPH','GRASP','GRASS','GRATE',
-            'GRAVE','GRAVY','GRAZE','GREAT','GREED','GREET','GRIEF','GRILL','GRIME','GRIND',
-            'GRIPE','GROAN','GROIN','GROOM','GROPE','GROSS','GROUP','GROVE','GROWL','GROWN',
-            'GUARD','GUEST','GUIDE','GUILD','GUILT','GUISE','GULCH','GUMMY','GUPPY','GUSSY',
-            'GUSTO','GUSTY','HABIT','HACKY','HAIKU','HAIRY','HALTS','HANDY','HAPPY','HARDY',
-            'HASTE','HASTY','HATCH','HAUNT','HAVEN','HEADS','HEARD','HEART','HEAVY','HEDGE',
-            'HEIST','HERBS','HERON','HIKER','HIRED','HITCH','HOARD','HOBBY','HOIST','HOLDS',
-            'HOMES','HONEY','HOPED','HORSE','HOSED','HOTEL','HOUND','HOURS','HOUSE','HUMAN',
-            'HUMID','HUSKY','ICING','ICONS','IDEAL','IDLER','IMAGE','IMPLY','INANE','INDEX',
-            'INEPT','INERT','INGOT','INNER','INPUT','INTRO','IRATE','IRKED','IRONY','ISSUE',
-            'ITCHY','IVORY','JAILS','JAUNT','JEANS','JERKY','JEWEL','JIFFY','JOKER','JOLLY',
-            'JOUST','JUDGE','JUICE','JUICY','JUMBO','JUMPS','JUMPY','JUNCO','JUNKY','JUROR',
-            'KARMA','KAYAK','KEBAB','KELPS','KICKS','KILNS','KILTS','KINDS','KINGS','KIOSK',
-            'KNIFE','KNOCK','KNOWN','KUDOS','LABEL','LABOR','LACED','LADLE','LAGER','LANCE',
-            'LANES','LAPSE','LARGE','LASER','LATCH','LATER','LATEX','LATHE','LATIN','LAUGH',
-            'LAYER','LEACH','LEADS','LEAFY','LEAKY','LEANT','LEARN','LEASE','LEASH','LEAST',
-            'LEDGE','LEMON','LIENS','LIGHT','LIMBO','LIMBS','LIMPS','LINED','LINER','LINES',
-            'LINKS','LIONS','LITER','LIVER','LIVED','LIVES','LOADS','LOANS','LOATH','LOCAL',
-            'LOCKS','LODGE','LOFTY','LOGIC','LONER','LONGS','LOOPY','LORDS','LOSER','LOTUS',
-            'LOUSE','LOUSY','LOVED','LOVER','LOWER','LOYAL','LUCID','LUCKY','LUMEN','LUMPS',
-            'LUMPY','LUNAR','LUNCH','LUNGE','LUNGS','LURCH','LURID','LYING','LYRIC','MACHO',
-            'MACRO','MAGIC','MAINS','MAIZE','MAJOR','MAKER','MALES','MANGE','MANGO','MANGY',
-            'MANOR','MAPLE','MARCH','MARSH','MASON','MATCH','MAYOR','MEALY','MEANT','MEATY',
-            'MEDAL','MEDIA','MELON','MERCY','MERGE','MERIT','MESSY','METAL','MICRO','MIDGE',
-            'MIDST','MIGHT','MINCE','MINDS','MINED','MINER','MINOR','MINTY','MINUS','MIRTH',
-            'MISER','MISTY','MIXED','MIXER','MODEL','MOIST','MOLAR','MONEY','MONTH','MOOSE',
-            'MORAL','MORON','MORPH','MOSSY','MOTEL','MOTIF','MOTOR','MOULD','MOUNT','MOURN',
-            'MOUSE','MOUSY','MOUTH','MOVED','MOVER','MOVIE','MUCKY','MUCUS','MUDDY','MULCH',
-            'MUNCH','MURAL','MURKY','MUSIC','MUSKY','MUSTY','MYTHS','NACHO','NAIVE','NAKED',
-            'NAMES','NAPPY','NASTY','NAVAL','NAVEL','NECKS','NERDY','NERVE','NEWLY','NICER',
-            'NICHE','NIGHT','NINJA','NOBLE','NOISE','NOISY','NOMAD','NORTH','NOTCH','NOTED',
-            'NOTES','NOVEL','NUDGE','NURSE','OAKEN','OATER','OCCUR','OCEAN','OCTET','ODIUM',
-            'OFFER','OFTEN','OILED','OLDEN','OLDER','OLIVE','ONSET','OPENS','OPERA','OPTED',
-            'OPTIC','ORBIT','ORDER','ORGAN','OTHER','OUGHT','OUNCE','OUTER','OUTGO','OVARY',
-            'OVERT','OWNED','OWNER','OXIDE','OZONE','PACED','PACER','PAGER','PAGES','PAINT',
-            'PAIRS','PALER','PALMS','PALSY','PANEL','PANIC','PANTS','PAPER','PARKS','PARTS',
-            'PARTY','PASTA','PASTE','PASTY','PATCH','PATIO','PAUSE','PEACE','PEACH','PEAKS',
-            'PEARL','PECAN','PEDAL','PENAL','PENNY','PERCH','PERKY','PESKY','PETAL','PETRI',
-            'PETTY','PHASE','PHONE','PHONY','PIANO','PICKS','PICKY','PIECE','PIETY','PIGMY',
-            'PIKED','PILED','PILOT','PINCH','PINED','PINTO','PIOUS','PIPES','PITCH','PITHY',
-            'PIVOT','PIXEL','PLACE','PLAID','PLAIN','PLANE','PLANK','PLANS','PLANT','PLATE',
-            'PLAYS','PLAZA','PLEAD','PLEAT','PLEDGE','PLIER','PLODS','PLONK','PLOTS','PLUCK',
-            'PLUGS','PLUMB','PLUME','PLUMP','PLUMS','PLUNK','PLUSH','POACH','POEMS','POETS',
-            'POINT','POISE','POKEY','POLAR','POLES','PONDS','PORCH','PORES','PORKS','PORKY',
-            'PORTS','POSED','POSER','POSIT','POSSE','POUCH','POULT','POUND','POWER','PRANK',
-            'PRAWN','PREACH','PRESS','PREYS','PRICE','PRIDE','PRIED','PRIME','PRINT','PRIOR',
-            'PRISM','PRIVY','PRIZE','PROBE','PRODS','PRONE','PRONG','PROOF','PROSE','PROUD',
-            'PROVE','PROWL','PRUDE','PRUNE','PSALM','PUBIC','PUFFY','PULSE','PUNCH','PUNKS',
-            'PUNTS','PURGE','PUSHY','QUALM','QUART','QUEEN','QUERY','QUEST','QUICK','QUIET',
-            'QUILT','QUIRK','QUOTA','QUOTE','RABID','RACED','RACER','RADAR','RADIO','RADON',
-            'RAGED','RAIDS','RAILS','RAINY','RAISE','RALLY','RANCH','RANGE','RANTS','RAPID',
-            'RASPY','RATIO','RAVEN','RAZOR','REACH','REACT','READS','READY','REALM','REAMS',
-            'RECAP','REDUX','REEDY','REFIT','REGAL','REIGN','RELAX','RELAY','RELIC','REMIX',
-            'RENAL','REPAY','REPLY','RESIN','RETRO','RHINO','RHYME','RIDGE','RIFLE','RIGHT',
-            'RIGID','RIGOR','RINDS','RINGS','RINSE','RISEN','RISKY','RITZY','RIVAL','RIVEN',
-            'RIVER','ROADS','ROAMS','ROAST','ROBED','ROBES','ROBIN','ROBOT','ROCKS','ROCKY',
-            'RODEO','ROGUE','ROLES','ROMAN','ROOST','ROSES','ROSIN','ROTOR','ROUGE','ROUGH',
-            'ROUND','ROUSE','ROUTE','ROVER','ROWDY','ROYAL','RUBES','RUCKS','RUDDY','RUDER',
-            'RUGBY','RUINS','RULED','RULER','RUMMY','RUMPS','RUPEE','RURAL','RUSTY','SADLY',
-            'SAFER','SAINT','SALTY','SALVE','SANDY','SANER','SAPLING','SAPPY','SATIN','SAUCE',
-            'SAUCY','SAUNA','SAVOR','SCALD','SCALE','SCALP','SCALY','SCAMP','SCANT','SCARE',
-            'SCARF','SCARS','SCARY','SCENE','SCENT','SCHMO','SCONE','SCOOP','SCOPE','SCORE',
-            'SCORN','SCOUT','SCOWL','SCRAM','SCRAP','SCRUB','SEAMS','SEARS','SEDAN','SEDGE',
-            'SEEDY','SEGUE','SEIZE','SENSE','SEPIA','SERUM','SERVE','SETUP','SEVEN','SEWER',
-            'SHACK','SHADE','SHADY','SHAFT','SHAKE','SHAKY','SHALE','SHAME','SHANK','SHAPE',
-            'SHARD','SHARE','SHARK','SHARP','SHAVE','SHAWL','SHEAF','SHEAR','SHEEN','SHEEP',
-            'SHEER','SHELF','SHELL','SHIFT','SHINE','SHINY','SHIRE','SHIRK','SHIRT','SHOCK',
-            'SHOES','SHONE','SHOOK','SHOOT','SHORE','SHORN','SHORT','SHOUT','SHOVE','SHOWN',
-            'SHOWY','SHRUB','SHRUG','SHUCK','SHUNT','SIDED','SIDES','SIEGE','SIGMA','SIGHT',
-            'SIGMA','SIGNS','SILKY','SILTS','SINCE','SINGE','SIREN','SIREN','SITED','SITES',
-            'SIXTH','SIXTY','SIZED','SKATE','SKEIN','SKIER','SKIES','SKIMP','SKIMS','SKINS',
-            'SKIRT','SKULK','SKULL','SKUNK','SLACK','SLAIN','SLANG','SLANT','SLASH','SLATE',
-            'SLAVE','SLEEK','SLEEP','SLEET','SLEPT','SLICE','SLIDE','SLIME','SLIMY','SLING',
-            'SLINK','SLIPS','SLOPE','SLOSH','SLOTH','SLUMP','SLUNG','SLUNK','SLURP','SLYLY',
-            'SMACK','SMALL','SMART','SMASH','SMEAR','SMELL','SMELT','SMILE','SMIRK','SMITE',
-            'SMITH','SMOKE','SMOKY','SNACK','SNAIL','SNAKE','SNAKY','SNAPS','SNARE','SNARL',
-            'SNEAK','SNIDE','SNIFF','SNIPE','SNORE','SNORT','SNOUT','SNOWY','SNUCK','SNUGLY',
-            'SOAPY','SOBER','SOCKS','SOGGY','SOLAR','SOLED','SOLID','SOLVE','SONIC','SORRY',
-            'SORTS','SOUGHT','SOULS','SOUND','SOUTH','SPACE','SPADE','SPARE','SPARK','SPAWN',
-            'SPEAK','SPEAR','SPECK','SPECS','SPEED','SPELL','SPEND','SPENT','SPICE','SPICY',
-            'SPIED','SPIKE','SPIKY','SPILL','SPILT','SPINE','SPINY','SPIRE','SPITE','SPLAT',
-            'SPLIT','SPOIL','SPOKE','SPOON','SPORT','SPOTS','SPOUT','SPRAY','SPRIG','SPRIT',
-            'SPROUT','SPRUCE','SPUD','SPUME','SPUNK','SPURN','SPURT','SQUAT','SQUID','STABS',
-            'STACK','STAFF','STAGE','STAIN','STAIR','STAKE','STALE','STALK','STAMP','STAND',
-            'STANK','STARE','STARK','STARS','START','STASH','STATE','STAYS','STEAD','STEAK',
-            'STEAL','STEAM','STEEL','STEEP','STEER','STEMS','STEPS','STERN','STICK','STIFF',
-            'STILL','STILT','STING','STINK','STINT','STOCK','STOIC','STOKE','STOMP','STONE',
-            'STONY','STOOD','STOOL','STOOP','STORE','STORM','STORY','STOUT','STOVE','STRAP',
-            'STRAW','STRAY','STRIP','STRUM','STRUNG','STRUT','STUCK','STUDY','STUFF','STUMP',
-            'STUNG','STUNK','STUNT','STYLE','SUAVE','SUGAR','SUITE','SULKY','SUNNY','SUPER',
-            'SURGE','SWAMP','SWANK','SWARM','SWATH','SWEAR','SWEAT','SWEEP','SWEET','SWELL',
-            'SWEPT','SWIFT','SWIMS','SWINE','SWING','SWIPE','SWIRL','SWOON','SWOOP','SWORD',
-            'SWORE','SWORN','SWUNG','TABLE','TABOO','TACIT','TACKY','TAILS','TAKEN','TAKER',
-            'TALES','TALKS','TAMER','TANGY','TANKS','TARDY','TARPS','TASTE','TASTY','TAUNT',
-            'TAWNY','TAXES','TEACH','TEAMS','TEARS','TEARY','TEASE','TEDDY','TEENS','TEETH',
-            'TEMPO','TENDS','TENOR','TENSE','TENTH','TERMS','TEPID','TERRA','TERSE','TESTS',
-            'THANK','THEFT','THEIR','THEME','THERE','THESE','THICK','THIEF','THIGH','THING',
-            'THINK','THIRD','THORN','THOSE','THREE','THREW','THROB','THROW','THRUM','THUDS',
-            'THUMB','THUMP','TIARA','TIDAL','TIGER','TIGHT','TILTS','TIMER','TIMES','TIMID',
-            'TIPSY','TIRED','TITAN','TITLE','TOAST','TODAY','TONED','TONER','TONES','TONIC',
-            'TOOLS','TOOTH','TOPIC','TORCH','TORSO','TOTAL','TOTEM','TOUCH','TOUGH','TOURS',
-            'TOWEL','TOWER','TOWNS','TOXIC','TRACE','TRACK','TRACT','TRADE','TRAIL','TRAIN',
-            'TRAIT','TRAMP','TRASH','TRAWL','TREAD','TREAT','TREND','TRIAL','TRIBE','TRICK',
-            'TRIED','TRIKE','TRIMS','TRIOS','TRITE','TROLL','TROMP','TROOP','TROPE','TROTH',
-            'TROTS','TROUT','TROVE','TROWEL','TRUCE','TRUCK','TRULY','TRUMP','TRUNK','TRUSS',
-            'TRUST','TRUTH','TRYST','TULIP','TUMOR','TUNED','TUNER','TUNES','TUNIC','TURBO',
-            'TURFS','TURNS','TUTOR','TWAIN','TWANG','TWEAK','TWEED','TWICE','TWIGS','TWINE',
-            'TWIRL','TWIST','TYING','TYPED','TYPES','UDDER','ULCER','ULTRA','UMBRA','UNARM',
-            'UNCAP','UNCLE','UNCUT','UNDER','UNDID','UNDUE','UNFED','UNFIT','UNHIP','UNION',
-            'UNITE','UNITS','UNITY','UNLIT','UNMET','UNPIN','UNSAY','UNSET','UNTIE','UNTIL',
-            'UNWED','UNWET','UNWIT','UNWON','UNZIP','UPPER','UPSET','URBAN','URGED','URINE',
-            'USAGE','USHER','USING','USUAL','UTTER','VAGUE','VALET','VALID','VALOR','VALUE',
-            'VALVE','VAPID','VAULT','VAUNT','VEILS','VEINS','VEINY','VENOM','VENUE','VERGE',
-            'VERSE','VICAR','VIDEO','VIED','VIEWS','VIGIL','VIGOR','VIPER','VIRAL','VIRUS',
-            'VISIT','VISOR','VISTA','VITAL','VIVID','VIXEN','VOCAL','VODKA','VOGUE','VOICE',
-            'VOILA','VOMIT','VOTED','VOTER','VOUCH','VOWED','VOWEL','VULGAR','WACKY','WADER',
-            'WAGED','WAGER','WAGES','WAGON','WAIST','WAKEN','WAKER','WALKS','WALTZ','WANDS',
-            'WANTS','WARPS','WARTS','WARTY','WASHY','WASTE','WATCH','WATER','WAVED','WAVER',
-            'WAVES','WAXEN','WAXY','WEAK','WEALD','WEALTH','WEARY','WEAVE','WEDGE','WEEDS',
-            'WEEDY','WEEKS','WEIGH','WEIRD','WELCH','WELLS','WELSH','WENCH','WETLY','WHACK',
-            'WHALE','WHARF','WHEAT','WHEEL','WHERE','WHICH','WHIFF','WHILE','WHIMS','WHINE',
-            'WHINY','WHIPS','WHIRL','WHISK','WHITE','WHOLE','WHOMP','WHOSE','WIDEN','WIDER',
-            'WIDOW','WIDTH','WIELD','WILES','WILLS','WIMPY','WINCE','WINCH','WINDS','WINDY',
-            'WINES','WINGS','WINKS','WIPED','WIPER','WIRED','WIRES','WISER','WISPS','WISPY',
-            'WITCH','WITTY','WIVES','WOKEN','WOMAN','WOMEN','WOODS','WOODY','WORDS','WORDY',
-            'WORKS','WORLD','WORMS','WORMY','WORRY','WORSE','WORST','WORTH','WOULD','WOUND',
-            'WOVEN','WRATH','WREAK','WRECK','WREST','WRING','WRIST','WRITE','WRONG','WROTE',
-            'YACHT','YARDS','YARNS','YAWNS','YEARN','YEARS','YEAST','YIELD','YOUNG','YOURS',
-            'YOUTH','ZEBRA','ZESTY','ZILCH','ZINCS','ZONAL','ZONES'
-        ].filter(function(w) { return hasUniqueLetters(w); });
-
-        function toggleSound() {
-            state.soundEnabled = !state.soundEnabled;
-            saveSoundEnabled(state.soundEnabled);
-            if (state.soundEnabled) playSound('click');
-            render();
-        }
-
-        function hasUniqueLetters(word) {
-            var letters = {};
-            for (var i = 0; i < word.length; i++) {
-                var char = word[i];
-                // Check it's a letter A-Z
-                if (!/^[A-Z]$/.test(char)) return false;
-                if (letters[char]) return false;
-                letters[char] = true;
-            }
-            return true;
-        }
-
-        function sanitizeWord(word) {
-            // Remove spaces and non-letter characters, uppercase
-            return word.toUpperCase().replace(/[^A-Z]/g, '');
-        }
-
-        function checkWord(word) {
-            return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
-                .then(function(response) { return response.ok; })
-                .catch(function() { return false; });
-        }
 
         function shareGame(url) {
             var text = 'Join my 5letters game! ' + url;
@@ -924,7 +1096,7 @@
 
         function startSinglePlayer() {
             // Pick a random word from the list
-            var randomWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+            var randomWord = getWordList()[Math.floor(Math.random() * getWordList().length)];
             state.singlePlayer = {
                 secretWord: randomWord,
                 guesses: [],
@@ -1214,8 +1386,8 @@
                 }
 
                 var alphabetHtml = '';
-                for (var i = 0; i < ALPHABET.length; i++) {
-                    var letter = ALPHABET[i];
+                for (var i = 0; i < getAlphabet().length; i++) {
+                    var letter = getAlphabet()[i];
                     var lState = letterStates[letter];
                     var btnClass = lState === 'excluded' ? 'bg-red-500 text-white line-through' : lState === 'included' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300';
                     alphabetHtml += '<button data-letter="' + letter + '" data-sp="true" class="sp-letter-btn w-9 h-9 rounded font-bold text-base transition ' + btnClass + '">' + letter + '</button>';
@@ -1374,25 +1546,31 @@
                 var hasGameCode = state.gameId && state.gameId.length > 0;
                 var buttonsHtml = hasGameCode 
                     ? '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>'
-                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg">Play Now</button>' +
+                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg">' + t('playNow') + '</button>' +
                       '<div class="flex gap-3 mt-4 pt-4 border-t border-gray-200">' +
-                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">2-Player Start</button>' +
-                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Join 2-Player Game</button></div>';
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">' + t('twoPlayerStart') + '</button>' +
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = t(\'enterName\'); render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">' + t('joinTwoPlayer') + '</button></div>';
                 
+                var langSwitcher = '<div class="flex justify-center gap-3 mt-4">' +
+                    '<button onclick="switchLang(\'en\')" class="lang-btn text-2xl ' + (currentLang === 'en' ? 'active' : '') + '" title="English">🇬🇧</button>' +
+                    '<button onclick="switchLang(\'de\')" class="lang-btn text-2xl ' + (currentLang === 'de' ? 'active' : '') + '" title="Deutsch">🇩🇪</button>' +
+                    '</div>';
+
                 app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
-                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">5letters</h1>' +
+                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">' + t('logoText') + '</h1>' +
                     '<div class="flex justify-center items-center gap-4 mb-6">' +
-                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">How to Play</button>' +
-                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">Your Stats</button>' +
-                    '<button onclick="toggleSound()" class="text-purple-600 hover:text-purple-800" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
+                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('howToPlay') + '</button>' +
+                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('yourStats') + '</button>' +
+                    '<button onclick="toggleSound()" class="text-purple-600 hover:text-purple-800" title="' + (state.soundEnabled ? t('mute') : t('unmute')) + '">' +
                     (state.soundEnabled 
                         ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
                         : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>') +
                     '</button></div>' +
-                    '<input type="text" id="playerName" placeholder="Your name (optional)" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
+                    '<input type="text" id="playerName" placeholder="' + t('namePlaceholder') + '" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '</div><p class="text-gray-500 text-xs mt-4">Copyright 2026 5letters.fun</p></div>' + joinModal + shareModal + modals;
+                    langSwitcher +
+                    '</div><p class="text-gray-500 text-xs mt-4">' + t('copyright') + '</p></div>' + joinModal + shareModal + modals;
                 return;
             }
 
@@ -1453,8 +1631,8 @@
             }
 
             var alphabetHtml = '';
-            for (var i = 0; i < ALPHABET.length; i++) {
-                var letter = ALPHABET[i];
+            for (var i = 0; i < getAlphabet().length; i++) {
+                var letter = getAlphabet()[i];
                 var lState = letterStates[letter];
                 var btnClass = lState === 'excluded' ? 'bg-red-500 text-white line-through' : lState === 'included' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300';
                 alphabetHtml += '<button data-letter="' + letter + '" class="letter-btn w-9 h-9 rounded font-bold text-base transition ' + btnClass + '">' + letter + '</button>';
