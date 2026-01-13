@@ -212,6 +212,87 @@
         function isFirstTimeUser() { return !localStorage.getItem('wordoInstructionsSeen'); }
         function markInstructionsSeen() { localStorage.setItem('wordoInstructionsSeen', 'true'); }
 
+        // Hints system - show tips for first few games
+        function getGamesPlayed() {
+            var stats = loadStats();
+            return stats.gamesPlayed || 0;
+        }
+        function shouldShowHints() {
+            return getGamesPlayed() < 3;
+        }
+        function getHintsDismissed() {
+            var saved = localStorage.getItem('wordoHintsDismissed_' + visitorId);
+            if (saved) return JSON.parse(saved);
+            return {};
+        }
+        function dismissHint(hintId) {
+            var dismissed = getHintsDismissed();
+            dismissed[hintId] = true;
+            localStorage.setItem('wordoHintsDismissed_' + visitorId, JSON.stringify(dismissed));
+        }
+        function isHintDismissed(hintId) {
+            return getHintsDismissed()[hintId] === true;
+        }
+
+        // Analytics logging
+        function logEvent(eventName, data) {
+            try {
+                database.ref('analytics/' + eventName).push({
+                    timestamp: Date.now(),
+                    visitorId: visitorId,
+                    data: data || null
+                });
+            } catch (e) {
+                console.log('Analytics error:', e);
+            }
+        }
+
+        // Generate contextual hints HTML for new players
+        function generateHintsHtml(context) {
+            if (!shouldShowHints()) return '';
+            var hints = [];
+            
+            // Context: 'first_guess' - show after first guess is made
+            if (context === 'first_guess' && !isHintDismissed('first_guess')) {
+                hints.push({
+                    id: 'first_guess',
+                    text: '💡 <strong>The number shows how many of YOUR letters appear in the secret word</strong> — but not which ones! Use logic to narrow it down.',
+                    color: 'blue'
+                });
+            }
+            
+            // Context: 'alphabet' - show near alphabet section
+            if (context === 'alphabet' && !isHintDismissed('alphabet')) {
+                hints.push({
+                    id: 'alphabet',
+                    text: '💡 <strong>Red and green are YOUR notes</strong> — click letters to mark them as ruled out (red), or long-press to mark as definitely in the word (green). The game doesn\'t tell you which letters match!',
+                    color: 'amber'
+                });
+            }
+            
+            // Context: 'goal' - show at start of game
+            if (context === 'goal' && !isHintDismissed('goal')) {
+                hints.push({
+                    id: 'goal',
+                    text: '🎯 <strong>Goal:</strong> Guess the secret word in as few tries as possible! Each guess tells you how many letters match.',
+                    color: 'purple'
+                });
+            }
+            
+            if (hints.length === 0) return '';
+            
+            var html = '';
+            hints.forEach(function(hint) {
+                var bgColor = hint.color === 'blue' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+                              hint.color === 'amber' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                              'bg-purple-50 border-purple-200 text-purple-800';
+                html += '<div class="' + bgColor + ' border rounded-lg p-3 mb-2 text-sm relative">' +
+                    '<button onclick="dismissHint(\'' + hint.id + '\'); render()" class="absolute top-1 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>' +
+                    '<div class="pr-6">' + hint.text + '</div></div>';
+            });
+            return html;
+        }
+
         var state = {
             playerId: sessionPlayerId,
             visitorId: visitorId,
@@ -563,6 +644,7 @@
                 saveActiveGame(gameId, state.playerId);
                 listenToGame(gameId);
                 window.history.pushState({}, '', '?game=' + gameId);
+                logEvent('game_created', { mode: 'multiplayer' });
                 render();
             }).catch(function(error) { state.message = 'Error creating game: ' + error.message; render(); });
         }
@@ -592,6 +674,7 @@
                     state.lastOpponentGuessCount = 0;
                     saveActiveGame(gameId, state.playerId);
                     listenToGame(gameId);
+                    logEvent('game_joined', { mode: 'multiplayer' });
                     render();
                 }).catch(function(error) { state.message = 'Error joining game: ' + error.message; render(); });
             }).catch(function(error) { state.message = 'Error finding game: ' + error.message; render(); });
@@ -629,6 +712,7 @@
                             };
                             saveGameToHistory(gameRecord);
                             state.lastGameResult = gameRecord;
+                            logEvent('game_completed', { mode: 'multiplayer', won: true, guesses: myPlayer.guesses.length });
                             database.ref('games/' + gameId + '/players/' + state.playerId + '/statsRecorded').set(true);
                         } else if (opponentId && state.gameState.players[opponentId].won) {
                             updateStats(false, 0);
@@ -642,6 +726,7 @@
                             };
                             saveGameToHistory(gameRecord);
                             state.lastGameResult = gameRecord;
+                            logEvent('game_completed', { mode: 'multiplayer', won: false, guesses: myPlayer.guesses ? myPlayer.guesses.length : 0 });
                             playSound('lose'); haptic('heavy');
                             database.ref('games/' + gameId + '/players/' + state.playerId + '/statsRecorded').set(true);
                         }
@@ -830,6 +915,7 @@
             };
             state.currentGuess = '';
             state.message = '';
+            logEvent('game_started', { mode: 'solo' });
             render();
         }
 
@@ -867,6 +953,7 @@
                     saveGameToHistory(gameRecord);
                     updateStats(true, state.singlePlayer.guesses.length);
                     state.lastGameResult = gameRecord;
+                    logEvent('game_completed', { mode: 'solo', won: true, guesses: state.singlePlayer.guesses.length });
                 } else {
                     if (matchCount > 0) { playSound('match'); haptic('medium'); }
                     else { playSound('click'); haptic('light'); }
@@ -921,6 +1008,7 @@
             saveGameToHistory(gameRecord);
             updateStats(false, 0);
             state.lastGameResult = gameRecord;
+            logEvent('game_completed', { mode: 'solo', won: false, guesses: state.singlePlayer.guesses.length, gaveUp: true });
             render();
         }
 
@@ -1141,6 +1229,11 @@
                         '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Go</button></div></div>';
                 }
 
+                // Generate contextual hints for new players
+                var goalHint = (sp.guesses.length === 0) ? generateHintsHtml('goal') : '';
+                var alphabetHint = generateHintsHtml('alphabet');
+                var firstGuessHint = (sp.guesses.length === 1) ? generateHintsHtml('first_guess') : '';
+
                 app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                     '<div class="flex items-center justify-between mb-3">' +
                     '<h1 class="text-2xl font-bold text-gray-800 logo-font">5letters</h1>' +
@@ -1154,10 +1247,13 @@
                     (!sp.gameOver ? '<button onclick="confirmQuit()" class="p-1 hover:bg-gray-100 rounded-lg" title="Quit"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' : '') +
                     '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">Solo</div>' +
                     '<div class="text-xs text-gray-500">' + sp.guesses.length + ' guesses</div></div></div></div>' +
+                    goalHint +
                     circleSection +
+                    alphabetHint +
                     '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
                     '<div class="flex flex-wrap gap-1" id="spAlphabet">' + alphabetHtml + '</div></div>' +
                     guessInputHtml +
+                    firstGuessHint +
                     (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
                     (!sp.gameOver ? '<button onclick="giveUpSinglePlayer()" class="w-full mb-3 text-gray-500 hover:text-gray-700 text-sm">Give up & reveal word</button>' : '') +
                     '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
@@ -1366,6 +1462,12 @@
                 }
             }
 
+            // Generate contextual hints for new players
+            var myGuessCount = myPlayer.guesses ? myPlayer.guesses.length : 0;
+            var goalHint = (myGuessCount === 0 && state.gameState.started) ? generateHintsHtml('goal') : '';
+            var alphabetHint = generateHintsHtml('alphabet');
+            var firstGuessHint = (myGuessCount === 1) ? generateHintsHtml('first_guess') : '';
+
             app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                 '<div class="flex items-center justify-between mb-3">' +
                 '<h1 class="text-2xl font-bold text-gray-800 logo-font">5letters</h1>' +
@@ -1379,10 +1481,13 @@
                 (!gameEndBanner ? '<button onclick="confirmQuit()" class="p-1 hover:bg-gray-100 rounded-lg" title="Quit"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' : '') +
                 '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">' + state.gameId + '</div>' +
                 '<div class="text-xs text-gray-500">vs ' + (opponent ? opponent.name : '...') + '</div></div></div></div>' +
+                goalHint +
                 circleSection +
+                alphabetHint +
                 '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
                 '<div class="flex flex-wrap gap-1" id="alphabet">' + alphabetHtml + '</div></div>' +
                 guessInputHtml +
+                firstGuessHint +
                 (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
                 '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
                 '<div class="space-y-1 max-h-72 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
@@ -1422,6 +1527,9 @@
             }
         }
 
+        // Log page view once on load
+        logEvent('page_view');
+        
         render();
     </script>
 </body>
