@@ -510,10 +510,18 @@
         function hasUniqueLetters(word) {
             var letters = {};
             for (var i = 0; i < word.length; i++) {
-                if (letters[word[i]]) return false;
-                letters[word[i]] = true;
+                var char = word[i];
+                // Check it's a letter A-Z
+                if (!/^[A-Z]$/.test(char)) return false;
+                if (letters[char]) return false;
+                letters[char] = true;
             }
             return true;
+        }
+
+        function sanitizeWord(word) {
+            // Remove spaces and non-letter characters, uppercase
+            return word.toUpperCase().replace(/[^A-Z]/g, '');
         }
 
         function checkWord(word) {
@@ -749,7 +757,7 @@
         }
 
         function setSecretWord() {
-            var word = state.myWord.toUpperCase();
+            var word = sanitizeWord(state.myWord);
             if (word.length !== 5) { state.message = 'Word must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
             if (!hasUniqueLetters(word)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
             state.message = '';
@@ -774,7 +782,7 @@
         }
 
         function makeGuess() {
-            var guess = state.currentGuess.toUpperCase();
+            var guess = sanitizeWord(state.currentGuess);
             if (guess.length !== 5) { state.message = 'Guess must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
             if (!hasUniqueLetters(guess)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
             state.message = '';
@@ -932,7 +940,7 @@
         }
 
         function makeSinglePlayerGuess() {
-            var guess = state.currentGuess.toUpperCase();
+            var guess = sanitizeWord(state.currentGuess);
             if (guess.length !== 5) { state.message = 'Guess must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
             if (!hasUniqueLetters(guess)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
             state.message = '';
