@@ -1039,15 +1039,17 @@
             var result = state.lastGameResult;
             
             // Build grid with letters for last 3 guesses (red/green like in-game alphabet)
+            // Reverse order so most recent is at top
             var guessGrid = '';
             if (result.guessData && result.guessData.length > 0) {
                 var secretWord = result.theirWord;
-                result.guessData.forEach(function(guess, idx) {
-                    var isLastGuess = (idx === result.guessData.length - 1) && result.won;
+                var guesses = result.guessData.slice().reverse(); // Copy and reverse
+                guesses.forEach(function(guess, idx) {
+                    var isWinningGuess = (idx === 0) && result.won; // First in reversed = most recent
                     var line = '';
                     for (var i = 0; i < guess.word.length; i++) {
                         var letter = guess.word[i];
-                        if (isLastGuess) {
+                        if (isWinningGuess) {
                             // Winning guess - all green
                             line += '🟩';
                         } else if (secretWord.indexOf(letter) !== -1) {
@@ -1067,7 +1069,7 @@
                 ? '🎉 I won at 5letters in ' + result.guesses + ' guesses' + opponentText + '!'
                 : '😅 I lost at 5letters after ' + result.guesses + ' guesses' + opponentText;
             
-            var text = header + '\n\n' + guessGrid + '\nPlay at 5letters.fun';
+            var text = header + '\n\n' + guessGrid + '\nhttps://5letters.fun';
             
             if (navigator.share) {
                 // On mobile, use share API with just text (URL in text already)
@@ -1409,7 +1411,10 @@
                         '<button onclick="cancelGame()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Cancel</button>' +
                         '</div></div>';
                 } else if (opponent && !opponent.wordSet) {
-                    statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">Waiting for ' + opponent.name + '...</div>';
+                    statusHtml = '<div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center">' +
+                        '<p>Waiting for ' + opponent.name + ' to set their word...</p>' +
+                        '<button onclick="cancelGame()" class="mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-lg transition text-sm">Cancel</button>' +
+                        '</div>';
                 } else if (opponent && opponent.wordSet) {
                     statusHtml = '<div class="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center">🎉 ' + opponent.name + ' is ready! Set your word.</div>';
                 }
@@ -1419,7 +1424,9 @@
                     '<input type="text" id="myWord" placeholder="Your secret word" value="' + state.myWord + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                     '<button onclick="state.myWord = document.getElementById(\'myWord\').value; setSecretWord()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Set Word</button>' +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    statusHtml + '</div></div>' + modals;
+                    statusHtml +
+                    '<button onclick="cancelGame()" class="w-full mt-4 text-gray-500 hover:text-gray-700 text-sm">← Back to Home</button>' +
+                    '</div></div>' + modals;
                 var wordInput = document.getElementById('myWord');
                 if (wordInput) wordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.myWord = wordInput.value; setSecretWord(); } });
                 return;
