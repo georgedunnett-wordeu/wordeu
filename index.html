@@ -252,6 +252,15 @@
             if (!shouldShowHints()) return '';
             var hints = [];
             
+            // Context: 'start' - show at very start pointing to guess box
+            if (context === 'start' && !isHintDismissed('start')) {
+                hints.push({
+                    id: 'start',
+                    text: '👇 <strong>Start here!</strong> Type any 5-letter word with unique letters in the box below and tap "Go" to make your first guess.',
+                    color: 'green'
+                });
+            }
+            
             // Context: 'first_guess' - show after first guess is made
             if (context === 'first_guess' && !isHintDismissed('first_guess')) {
                 hints.push({
@@ -285,6 +294,7 @@
             hints.forEach(function(hint) {
                 var bgColor = hint.color === 'blue' ? 'bg-blue-50 border-blue-200 text-blue-800' :
                               hint.color === 'amber' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                              hint.color === 'green' ? 'bg-green-50 border-green-200 text-green-800' :
                               'bg-purple-50 border-purple-200 text-purple-800';
                 html += '<div class="' + bgColor + ' border rounded-lg p-3 mb-2 text-sm relative">' +
                     '<button onclick="dismissHint(\'' + hint.id + '\'); render()" class="absolute top-1 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>' +
@@ -1150,15 +1160,15 @@
                 var circlePositions = [];
                 for (var i = 0; i < 5; i++) {
                     var angle = (i * 72 - 90) * (Math.PI / 180);
-                    var x = 110 + 80 * Math.cos(angle);
-                    var y = 110 + 80 * Math.sin(angle);
+                    var x = 77 + 56 * Math.cos(angle);
+                    var y = 77 + 56 * Math.sin(angle);
                     circlePositions.push({ x: x, y: y, letter: confirmedLetters[i] || '' });
                 }
                 var circleSvg = '';
                 for (var i = 0; i < circlePositions.length; i++) {
                     var pos = circlePositions[i];
-                    circleSvg += '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="20" fill="' + (pos.letter ? '#22c55e' : '#f3f4f6') + '" stroke="#d1d5db" stroke-width="2"/>' +
-                        '<text x="' + pos.x + '" y="' + pos.y + '" text-anchor="middle" dy="7" font-size="20" font-weight="bold" fill="' + (pos.letter ? 'white' : '#9ca3af') + '">' + pos.letter + '</text></g>';
+                    circleSvg += '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="14" fill="' + (pos.letter ? '#22c55e' : '#f3f4f6') + '" stroke="#d1d5db" stroke-width="2"/>' +
+                        '<text x="' + pos.x + '" y="' + pos.y + '" text-anchor="middle" dy="5" font-size="14" font-weight="bold" fill="' + (pos.letter ? 'white' : '#9ca3af') + '">' + pos.letter + '</text></g>';
                 }
 
                 var alphabetHtml = '';
@@ -1216,21 +1226,29 @@
                     ? '<div class="mb-3"><button onclick="state.circleExpanded = false; render()" class="flex items-center gap-2 text-sm text-gray-600 mb-2 font-semibold hover:text-gray-800">' +
                       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>' +
                       'Confirmed Letters (' + confirmedLetters.length + '/5)</button>' +
-                      '<div class="bg-gray-50 rounded-lg p-3">' +
-                      '<div class="flex justify-center"><svg width="180" height="180" viewBox="0 0 220 220"><circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div></div>'
+                      '<div class="bg-gray-50 rounded-lg p-2">' +
+                      '<div class="flex justify-center"><svg width="126" height="126" viewBox="0 0 154 154"><circle cx="77" cy="77" r="60" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div></div>'
                     : '<div class="mb-3"><button onclick="state.circleExpanded = true; render()" class="flex items-center gap-2 text-sm text-gray-600 font-semibold hover:text-gray-800">' +
                       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
                       'Confirmed Letters (' + confirmedLetters.length + '/5)</button></div>';
 
                 var guessInputHtml = '';
+                var isFirstGuess = sp.guesses.length === 0;
                 if (!sp.gameOver) {
+                    var inputClass = isFirstGuess 
+                        ? 'flex-1 px-4 py-4 border-3 border-purple-400 rounded-lg text-xl uppercase text-center focus:outline-none focus:border-purple-600 shadow-lg bg-purple-50'
+                        : 'flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500';
+                    var buttonClass = isFirstGuess
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg'
+                        : 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition';
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
-                        '<input type="text" id="spGuess" placeholder="Enter guess" value="' + state.currentGuess + '" maxlength="5" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
-                        '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Go</button></div></div>';
+                        '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? 'Type your guess here' : 'Enter guess') + '" value="' + state.currentGuess + '" maxlength="5" class="' + inputClass + '">' +
+                        '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="' + buttonClass + '">Go</button></div></div>';
                 }
 
                 // Generate contextual hints for new players
                 var goalHint = (sp.guesses.length === 0) ? generateHintsHtml('goal') : '';
+                var startHint = (sp.guesses.length === 0) ? generateHintsHtml('start') : '';
                 var alphabetHint = generateHintsHtml('alphabet');
                 var firstGuessHint = (sp.guesses.length === 1) ? generateHintsHtml('first_guess') : '';
 
@@ -1248,11 +1266,12 @@
                     '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">Solo</div>' +
                     '<div class="text-xs text-gray-500">' + sp.guesses.length + ' guesses</div></div></div></div>' +
                     goalHint +
+                    startHint +
+                    guessInputHtml +
                     circleSection +
                     alphabetHint +
                     '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
                     '<div class="flex flex-wrap gap-1" id="spAlphabet">' + alphabetHtml + '</div></div>' +
-                    guessInputHtml +
                     firstGuessHint +
                     (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
                     (!sp.gameOver ? '<button onclick="giveUpSinglePlayer()" class="w-full mb-3 text-gray-500 hover:text-gray-700 text-sm">Give up & reveal word</button>' : '') +
@@ -1313,9 +1332,10 @@
                 var hasGameCode = state.gameId && state.gameId.length > 0;
                 var buttonsHtml = hasGameCode 
                     ? '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>'
-                    : '<div class="flex gap-3"><button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition">Start New Game</button>' +
-                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition">Join Game</button></div>' +
-                      '<button onclick="startSinglePlayer()" class="w-full mt-3 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition">Practice Solo</button>';
+                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg">Play Now</button>' +
+                      '<div class="flex gap-3 mt-4 pt-4 border-t border-gray-200">' +
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">2-Player Start</button>' +
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Join 2-Player Game</button></div>';
                 
                 app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">5letters</h1>' +
@@ -1327,7 +1347,7 @@
                         ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
                         : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>') +
                     '</button></div>' +
-                    '<input type="text" id="playerName" placeholder="Your name" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
+                    '<input type="text" id="playerName" placeholder="Your name (optional)" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
                     '</div><p class="text-gray-500 text-xs mt-4">Copyright 2026 5letters.fun</p></div>' + joinModal + shareModal + modals;
@@ -1374,15 +1394,15 @@
             var circlePositions = [];
             for (var i = 0; i < 5; i++) {
                 var angle = (i * 72 - 90) * (Math.PI / 180);
-                var x = 110 + 80 * Math.cos(angle);
-                var y = 110 + 80 * Math.sin(angle);
+                var x = 77 + 56 * Math.cos(angle);
+                var y = 77 + 56 * Math.sin(angle);
                 circlePositions.push({ x: x, y: y, letter: confirmedLetters[i] || '' });
             }
             var circleSvg = '';
             for (var i = 0; i < circlePositions.length; i++) {
                 var pos = circlePositions[i];
-                circleSvg += '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="20" fill="' + (pos.letter ? '#22c55e' : '#f3f4f6') + '" stroke="#d1d5db" stroke-width="2"/>' +
-                    '<text x="' + pos.x + '" y="' + pos.y + '" text-anchor="middle" dy="7" font-size="20" font-weight="bold" fill="' + (pos.letter ? 'white' : '#9ca3af') + '">' + pos.letter + '</text></g>';
+                circleSvg += '<g><circle cx="' + pos.x + '" cy="' + pos.y + '" r="14" fill="' + (pos.letter ? '#22c55e' : '#f3f4f6') + '" stroke="#d1d5db" stroke-width="2"/>' +
+                    '<text x="' + pos.x + '" y="' + pos.y + '" text-anchor="middle" dy="5" font-size="14" font-weight="bold" fill="' + (pos.letter ? 'white' : '#9ca3af') + '">' + pos.letter + '</text></g>';
             }
 
             var alphabetHtml = '';
@@ -1440,10 +1460,10 @@
                 ? '<div class="mb-3"><button onclick="state.circleExpanded = false; render()" class="flex items-center gap-2 text-sm text-gray-600 mb-2 font-semibold hover:text-gray-800">' +
                   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>' +
                   'Your Word & Letters (' + confirmedLetters.length + '/5)</button>' +
-                  '<div class="bg-gray-50 rounded-lg p-3">' +
-                  '<div class="flex items-center justify-center gap-3 mb-3"><div id="secretWord" class="text-2xl font-bold tracking-widest text-gray-400">*****</div>' +
+                  '<div class="bg-gray-50 rounded-lg p-2">' +
+                  '<div class="flex items-center justify-center gap-3 mb-2"><div id="secretWord" class="text-2xl font-bold tracking-widest text-gray-400">*****</div>' +
                   '<button id="showWordBtn" class="p-2 rounded-full hover:bg-gray-200 transition animate-pulse"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div>' +
-                  '<div class="flex justify-center"><svg width="180" height="180" viewBox="0 0 220 220"><circle cx="110" cy="110" r="85" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div></div>'
+                  '<div class="flex justify-center"><svg width="126" height="126" viewBox="0 0 154 154"><circle cx="77" cy="77" r="60" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div></div>'
                 : '<div class="mb-3"><button onclick="state.circleExpanded = true; render()" class="flex items-center gap-2 text-sm text-gray-600 font-semibold hover:text-gray-800">' +
                   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
                   'Your Word & Letters (' + confirmedLetters.length + '/5)</button></div>';
