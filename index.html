@@ -148,12 +148,9 @@
         var currentLang = localStorage.getItem('5letters_lang') || (navigator.language.startsWith('de') ? 'de' : 'en');
         var langData = null;
         
-        // Minimal English fallback
-        var fallback = { ui: { playNow: 'Play Now', howToPlay: 'How to Play', yourStats: 'Your Stats' }, words: null, config: { alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' } };
-        
-        function t(key) { return (langData && langData.ui && langData.ui[key]) ? langData.ui[key] : (fallback.ui[key] || key); }
-        function getAlphabet() { return ((langData && langData.config && langData.config.alphabet) || fallback.config.alphabet).split(''); }
-        function getWordList() { return (langData && langData.words) ? langData.words : null; }
+        function t(key) { return (langData && langData.ui && langData.ui[key]) || key; }
+        function getAlphabet() { return ((langData && langData.config && langData.config.alphabet) || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ').split(''); }
+        function getWords() { return (langData && langData.words) || null; }
         
         function switchLanguage(lang) {
             currentLang = lang;
@@ -551,15 +548,15 @@
         }
 
         function checkWord(word) {
-            if (langData && langData.config && langData.config.dictionaryType === 'wiktionary') {
+            var type = (langData && langData.config && langData.config.dictionaryType) || 'english';
+            if (type === 'wiktionary') {
                 return fetch('https://' + currentLang + '.wiktionary.org/w/api.php?action=query&titles=' + encodeURIComponent(word.toLowerCase()) + '&format=json&origin=*')
                     .then(function(r) { return r.json(); })
                     .then(function(d) { return Object.keys(d.query.pages)[0] !== '-1'; })
                     .catch(function() { return true; });
             }
             return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
-                .then(function(r) { return r.ok; })
-                .catch(function() { return false; });
+                .then(function(r) { return r.ok; }).catch(function() { return false; });
         }
 
         function shareGame(url) {
@@ -790,11 +787,11 @@
 
         function setSecretWord() {
             var word = sanitizeWord(state.myWord);
-            if (word.length !== 5) { state.message = 'Word must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
-            if (!hasUniqueLetters(word)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
+            if (word.length !== 5) { state.message = t('wordMustBe5'); playSound('error'); haptic('error'); render(); return; }
+            if (!hasUniqueLetters(word)) { state.message = t('uniqueLetters'); playSound('error'); haptic('error'); render(); return; }
             state.message = '';
             checkWord(word).then(function(isValid) {
-                if (!isValid) { state.message = 'Not a valid English word'; playSound('error'); haptic('error'); render(); return; }
+                if (!isValid) { state.message = t('notValidWord'); playSound('error'); haptic('error'); render(); return; }
                 playSound('success'); haptic('success');
                 database.ref('games/' + state.gameId + '/players/' + state.playerId).update({ word: word, wordSet: true }).then(function() {
                     database.ref('games/' + state.gameId).once('value').then(function(snapshot) {
@@ -815,11 +812,11 @@
 
         function makeGuess() {
             var guess = sanitizeWord(state.currentGuess);
-            if (guess.length !== 5) { state.message = 'Guess must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
-            if (!hasUniqueLetters(guess)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
+            if (guess.length !== 5) { state.message = t('guessMustBe5'); playSound('error'); haptic('error'); render(); return; }
+            if (!hasUniqueLetters(guess)) { state.message = t('uniqueLetters'); playSound('error'); haptic('error'); render(); return; }
             state.message = '';
             checkWord(guess).then(function(isValid) {
-                if (!isValid) { state.message = 'Not a valid English word'; playSound('error'); haptic('error'); render(); return; }
+                if (!isValid) { state.message = t('notValidWord'); playSound('error'); haptic('error'); render(); return; }
                 var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
                 if (!opponentId || !state.gameState.players[opponentId].wordSet) { state.message = 'Waiting for opponent'; render(); return; }
                 var opponentWord = state.gameState.players[opponentId].word;
@@ -955,8 +952,7 @@
         }
 
         function startSinglePlayer() {
-            // Pick a random word - use Firebase words if available, else fallback
-            var words = getWordList() || WORD_LIST;
+            var words = getWords() || WORD_LIST;
             var randomWord = words[Math.floor(Math.random() * words.length)];
             state.singlePlayer = {
                 secretWord: randomWord,
@@ -974,11 +970,11 @@
 
         function makeSinglePlayerGuess() {
             var guess = sanitizeWord(state.currentGuess);
-            if (guess.length !== 5) { state.message = 'Guess must be exactly 5 letters'; playSound('error'); haptic('error'); render(); return; }
-            if (!hasUniqueLetters(guess)) { state.message = 'All letters must be unique'; playSound('error'); haptic('error'); render(); return; }
+            if (guess.length !== 5) { state.message = t('guessMustBe5'); playSound('error'); haptic('error'); render(); return; }
+            if (!hasUniqueLetters(guess)) { state.message = t('uniqueLetters'); playSound('error'); haptic('error'); render(); return; }
             state.message = '';
             checkWord(guess).then(function(isValid) {
-                if (!isValid) { state.message = 'Not a valid English word'; playSound('error'); haptic('error'); render(); return; }
+                if (!isValid) { state.message = t('notValidWord'); playSound('error'); haptic('error'); render(); return; }
                 
                 var secretWord = state.singlePlayer.secretWord;
                 var matchCount = 0;
@@ -1184,7 +1180,7 @@
                 var avgGuesses = stats.gamesWon > 0 ? (stats.totalGuesses / stats.gamesWon).toFixed(1) : '-';
                 modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
-                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Your Stats</h2>' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center"' + t('yourStats') + '</h2>' +
                     '<div class="grid grid-cols-2 gap-4 mb-4">' +
                     '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-purple-600">' + stats.gamesPlayed + '</div><div class="text-xs text-gray-600">Games Played</div></div>' +
                     '<div class="bg-gray-100 rounded-lg p-3 text-center"><div class="text-2xl font-bold text-green-600">' + winRate + '%</div><div class="text-xs text-gray-600">Win Rate</div></div>' +
@@ -1278,18 +1274,18 @@
                     if (sp.won) {
                         gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 shadow-lg z-50">' +
                             '<div class="max-w-2xl mx-auto text-center">' +
-                            '<h2 class="text-2xl font-bold mb-1">You Won! 🎉</h2>' +
-                            '<p class="text-sm mb-3">Guessed in ' + sp.guesses.length + ' tries! The word was ' + sp.secretWord + '</p>' +
+                            '<h2 class="text-2xl font-bold mb-1"' + t('youWon') + '</h2>' +
+                            '<p class="text-sm mb-3">' + t('guessedIn') + ' ' + sp.guesses.length + '' + t('tries') + ' ' + t('theWordWas') + ' ' + sp.secretWord + '</p>' +
                             '<div class="flex justify-center gap-2">' +
                             '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">Share</button>' +
-                            '<button onclick="startSinglePlayer()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Play Again</button>' +
+                            '<button onclick="startSinglePlayer()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition"' + t('playAgain') + '</button>' +
                             '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">Home</button>' +
                             '</div></div></div>';
                     } else {
                         gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 shadow-lg z-50">' +
                             '<div class="max-w-2xl mx-auto text-center">' +
                             '<h2 class="text-2xl font-bold mb-1">Game Over</h2>' +
-                            '<p class="text-sm mb-3">The word was: <span class="font-bold">' + sp.secretWord + '</span></p>' +
+                            '<p class="text-sm mb-3">' + t('theWordWas') + ': <span class="font-bold">' + sp.secretWord + '</span></p>' +
                             '<div class="flex justify-center gap-2">' +
                             '<button onclick="startSinglePlayer()" class="bg-white text-red-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Try Again</button>' +
                             '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">Home</button>' +
@@ -1318,7 +1314,7 @@
                         : 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition';
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
                         '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? 'Type your guess here' : 'Enter guess') + '" value="' + state.currentGuess + '" maxlength="5" class="' + inputClass + '">' +
-                        '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="' + buttonClass + '">Go</button></div></div>';
+                        '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="' + buttonClass + '"' + t('go') + '</button></div></div>';
                 }
 
                 // Generate contextual hints for new players
@@ -1329,7 +1325,7 @@
 
                 app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                     '<div class="flex items-center justify-between mb-3">' +
-                    '<h1 class="text-2xl font-bold text-gray-800 logo-font">5letters</h1>' +
+                    '<h1 class="text-2xl font-bold text-gray-800 logo-font">' + t('logo') + '</h1>' +
                     '<div class="flex items-center gap-2">' +
                     '<button onclick="toggleSound()" class="p-1 hover:bg-gray-100 rounded-lg" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                     (state.soundEnabled 
@@ -1339,7 +1335,7 @@
                     '<button onclick="state.showStats = true; render()" class="p-1 hover:bg-gray-100 rounded-lg" title="Stats"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></button>' +
                     (!sp.gameOver ? '<button onclick="confirmQuit()" class="p-1 hover:bg-gray-100 rounded-lg" title="Quit"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' : '') +
                     '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">Solo</div>' +
-                    '<div class="text-xs text-gray-500">' + sp.guesses.length + ' guesses</div></div></div></div>' +
+                    '<div class="text-xs text-gray-500">' + sp.guesses.length + '' + t('guesses') + '</div></div></div></div>' +
                     goalHint +
                     startHint +
                     guessInputHtml +
@@ -1349,7 +1345,7 @@
                     '<div class="flex flex-wrap gap-1" id="spAlphabet">' + alphabetHtml + '</div></div>' +
                     firstGuessHint +
                     (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
-                    (!sp.gameOver ? '<button onclick="giveUpSinglePlayer()" class="w-full mb-3 text-gray-500 hover:text-gray-700 text-sm">Give up & reveal word</button>' : '') +
+                    (!sp.gameOver ? '<button onclick="giveUpSinglePlayer()" class="w-full mb-3 text-gray-500 hover:text-gray-700 text-sm">' + t('giveUp') + '</button>' : '') +
                     '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
                     '<div class="space-y-1 max-h-72 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
                     '<p class="text-gray-500 text-xs text-center mt-2">Copyright 2026 5letters.fun</p></div>' + modals;
@@ -1407,16 +1403,16 @@
                 var hasGameCode = state.gameId && state.gameId.length > 0;
                 var buttonsHtml = hasGameCode 
                     ? '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>'
-                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg">Play Now</button>' +
+                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg"' + t('playNow') + '</button>' +
                       '<div class="flex gap-3 mt-4 pt-4 border-t border-gray-200">' +
                       '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">2-Player Start</button>' +
                       '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Join 2-Player Game</button></div>';
                 
                 app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
-                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">5letters</h1>' +
+                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">' + t('logo') + '</h1>' +
                     '<div class="flex justify-center items-center gap-4 mb-6">' +
-                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">How to Play</button>' +
-                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">Your Stats</button>' +
+                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold"' + t('howToPlay') + '</button>' +
+                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold"' + t('yourStats') + '</button>' +
                     '<button onclick="toggleSound()" class="text-purple-600 hover:text-purple-800" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                     (state.soundEnabled 
                         ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
@@ -1425,7 +1421,7 @@
                     '<input type="text" id="playerName" placeholder="Your name (optional)" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '<div class="flex justify-center gap-4 mt-4"><button onclick="switchLanguage(\'en\')" class="text-2xl ' + (currentLang==='en'?'opacity-100':'opacity-40') + '">🇬🇧</button><button onclick="switchLanguage(\'de\')" class="text-2xl ' + (currentLang==='de'?'opacity-100':'opacity-40') + '">🇩🇪</button></div>' +
+                    '<div class="flex justify-center gap-4 mt-4"><button onclick="switchLanguage(\'en\')" class="text-2xl ' + (currentLang==='en'?'':'opacity-40') + '">🇬🇧</button><button onclick="switchLanguage(\'de\')" class="text-2xl ' + (currentLang==='de'?'':'opacity-40') + '">🇩🇪</button></div>' +
                     '</div><p class="text-gray-500 text-xs mt-4">Copyright 2026 5letters.fun</p></div>' + joinModal + shareModal + modals;
                 return;
             }
@@ -1518,8 +1514,8 @@
             if (myPlayer.won) {
                 gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 shadow-lg z-50">' +
                     '<div class="max-w-2xl mx-auto text-center">' +
-                    '<h2 class="text-2xl font-bold mb-1">You Won! 🎉</h2>' +
-                    '<p class="text-sm mb-3">Guessed in ' + myPlayer.guesses.length + ' tries!</p>' +
+                    '<h2 class="text-2xl font-bold mb-1"' + t('youWon') + '</h2>' +
+                    '<p class="text-sm mb-3">' + t('guessedIn') + ' ' + myPlayer.guesses.length + '' + t('tries') + '</p>' +
                     '<div class="flex justify-center gap-2">' +
                     '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">Share Result</button>' +
                     '<button onclick="startRematch()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Rematch</button>' +
@@ -1557,7 +1553,7 @@
                 if (isMyTurn) {
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
                         '<input type="text" id="currentGuess" placeholder="Enter guess" value="' + state.currentGuess + '" maxlength="5" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
-                        '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Go</button></div></div>';
+                        '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition"' + t('go') + '</button></div></div>';
                 } else {
                     guessInputHtml = '<div class="mb-3 p-2 rounded-lg text-center text-sm font-semibold ' + turnClass + '">' + turnMsg + '</div>';
                 }
@@ -1571,7 +1567,7 @@
 
             app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                 '<div class="flex items-center justify-between mb-3">' +
-                '<h1 class="text-2xl font-bold text-gray-800 logo-font">5letters</h1>' +
+                '<h1 class="text-2xl font-bold text-gray-800 logo-font">' + t('logo') + '</h1>' +
                 '<div class="flex items-center gap-2">' +
                 '<button onclick="toggleSound()" class="p-1 hover:bg-gray-100 rounded-lg" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                 (state.soundEnabled 
