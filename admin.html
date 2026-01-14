@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5letters Admin - Language Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
+    <style>
+        .tab-active { border-bottom: 3px solid #8B5CF6; color: #8B5CF6; }
+        textarea { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-6xl mx-auto p-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">🌍 5letters Language Manager</h1>
+        <p class="text-gray-600 mb-6">Manage translations, word lists, and language settings</p>
+        
+        <div id="app">
+            <div class="text-center py-12">
+                <div class="text-4xl mb-4">⏳</div>
+                <p class="text-gray-500">Loading languages from Firebase...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBLGny5xsTpZmLJMCcVvT5AYcmBbQkebVA",
+            authDomain: "wordeu-742d5.firebaseapp.com",
+            databaseURL: "https://wordeu-742d5-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "wordeu-742d5",
+            storageBucket: "wordeu-742d5.firebasestorage.app",
+            messagingSenderId: "421599267741",
+            appId: "1:421599267741:web:c9059895883228e3b7fb00"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var database = firebase.database();
+
+        var state = {
+            languages: {},
+            selectedLang: 'en',
+            activeTab: 'ui',
+            newLangCode: '',
+            message: '',
+            messageType: 'success'
+        };
+
+        function showMessage(text, type) {
+            state.message = text;
+            state.messageType = type || 'success';
+            render();
+            setTimeout(function() { state.message = ''; render(); }, 3000);
+        }
+
+        function loadLanguages() {
+            database.ref('languages').once('value').then(function(snapshot) {
+                if (snapshot.exists()) {
+                    state.languages = snapshot.val();
+                    if (!state.languages[state.selectedLang]) {
+                        state.selectedLang = Object.keys(state.languages)[0] || 'en';
+                    }
+                } else {
+                    state.languages = {};
+                }
+                render();
+            }).catch(function(err) {
+                showMessage('Error loading: ' + err.message, 'error');
+            });
+        }
+
+        function updateUIString(key, value) {
+            var lang = state.selectedLang;
+            if (!state.languages[lang]) state.languages[lang] = { ui: {}, config: {}, words: [] };
+            if (!state.languages[lang].ui) state.languages[lang].ui = {};
+            state.languages[lang].ui[key] = value;
+            database.ref('languages/' + lang + '/ui/' + key).set(value);
+        }
+
+        function updateConfig(key, value) {
+            var lang = state.selectedLang;
+            if (!state.languages[lang].config) state.languages[lang].config = {};
+            state.languages[lang].config[key] = value;
+            database.ref('languages/' + lang + '/config/' + key).set(value);
+        }
+
+        function updateWords(wordsText) {
+            var lang = state.selectedLang;
+            var words = wordsText.split('\n').map(function(w) { return w.trim().toUpperCase(); }).filter(function(w) { return w.length === 5; });
+            state.languages[lang].words = words;
+            database.ref('languages/' + lang + '/words').set(words).then(function() {
+                showMessage('Saved ' + words.length + ' words!', 'success');
+            });
+        }
+
+        function addNewLanguage() {
+            var code = state.newLangCode.toLowerCase().trim();
+            if (!code || code.length !== 2) {
+                showMessage('Enter a 2-letter language code (e.g., fr, es)', 'error');
+                return;
+            }
+            if (state.languages[code]) {
+                showMessage('Language already exists!', 'error');
+                return;
+            }
+            var template = state.languages['en'] || { ui: {}, config: { alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', dictionaryType: 'english', dictionaryApi: '' }, words: [] };
+            var newLang = JSON.parse(JSON.stringify(template));
+            
+            database.ref('languages/' + code).set(newLang).then(function() {
+                state.languages[code] = newLang;
+                state.selectedLang = code;
+                state.newLangCode = '';
+                showMessage('Created ' + code.toUpperCase() + '! Now customize it.', 'success');
+            });
+        }
+
+        function deleteLang(code) {
+            if (code === 'en') { showMessage('Cannot delete English', 'error'); return; }
+            if (!confirm('Delete ' + code.toUpperCase() + '?')) return;
+            database.ref('languages/' + code).remove().then(function() {
+                delete state.languages[code];
+                state.selectedLang = 'en';
+                showMessage('Deleted', 'success');
+            });
+        }
+
+        function render() {
+            var app = document.getElementById('app');
+            var langs = Object.keys(state.languages);
+            var currentLang = state.languages[state.selectedLang] || { ui: {}, config: {}, words: [] };
+            
+            var langTabs = langs.map(function(code) {
+                var isActive = code === state.selectedLang;
+                return '<button onclick="state.selectedLang=\'' + code + '\';render()" class="px-4 py-2 font-semibold ' + (isActive ? 'tab-active' : 'text-gray-500 hover:text-gray-700') + '">' + code.toUpperCase() + '</button>';
+            }).join('');
+            
+            var addLangHtml = '<div class="flex items-center gap-2 ml-4">' +
+                '<input type="text" id="newLangCode" placeholder="xx" maxlength="2" value="' + state.newLangCode + '" class="w-16 px-2 py-1 border rounded text-center uppercase" onchange="state.newLangCode=this.value">' +
+                '<button onclick="addNewLanguage()" class="bg-green-500 text-white px-3 py-1 rounded text-sm">+ Add</button></div>';
+            
+            var contentTabs = '<div class="flex gap-4 mb-4 border-b">' +
+                '<button onclick="state.activeTab=\'ui\';render()" class="px-4 py-2 ' + (state.activeTab === 'ui' ? 'tab-active font-semibold' : 'text-gray-500') + '">UI Strings</button>' +
+                '<button onclick="state.activeTab=\'config\';render()" class="px-4 py-2 ' + (state.activeTab === 'config' ? 'tab-active font-semibold' : 'text-gray-500') + '">Config</button>' +
+                '<button onclick="state.activeTab=\'words\';render()" class="px-4 py-2 ' + (state.activeTab === 'words' ? 'tab-active font-semibold' : 'text-gray-500') + '">Words</button></div>';
+            
+            var contentHtml = '';
+            
+            if (state.activeTab === 'ui') {
+                var enUI = state.languages['en'] ? state.languages['en'].ui || {} : {};
+                var allKeys = Object.keys(enUI).sort();
+                contentHtml = '<div class="space-y-2 max-h-[60vh] overflow-auto">';
+                allKeys.forEach(function(key) {
+                    var value = (currentLang.ui && currentLang.ui[key]) || '';
+                    var enValue = enUI[key] || '';
+                    var needsTranslation = !value && state.selectedLang !== 'en';
+                    contentHtml += '<div class="flex gap-3 items-center p-2 rounded ' + (needsTranslation ? 'bg-yellow-50' : 'bg-white') + '">' +
+                        '<code class="w-40 text-xs text-purple-600 truncate" title="' + key + '">' + key + '</code>' +
+                        '<input type="text" value="' + (value || '').replace(/"/g, '&quot;') + '" onchange="updateUIString(\'' + key + '\', this.value)" class="flex-1 px-2 py-1 border rounded text-sm" placeholder="' + enValue.substring(0,30) + '">' +
+                        '</div>';
+                });
+                contentHtml += '</div>';
+            } else if (state.activeTab === 'config') {
+                var config = currentLang.config || {};
+                contentHtml = '<div class="space-y-4 bg-white p-6 rounded-lg">' +
+                    '<div><label class="block text-sm font-semibold mb-1">Alphabet</label>' +
+                    '<input type="text" value="' + (config.alphabet || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') + '" onchange="updateConfig(\'alphabet\', this.value)" class="w-full px-3 py-2 border rounded font-mono">' +
+                    '<p class="text-xs text-gray-500 mt-1">Add special chars: ÄÖÜ (German), ÀÉÈÙ (French)</p></div>' +
+                    '<div><label class="block text-sm font-semibold mb-1">Dictionary Type</label>' +
+                    '<select onchange="updateConfig(\'dictionaryType\', this.value)" class="w-full px-3 py-2 border rounded">' +
+                    '<option value="english" ' + (config.dictionaryType === 'english' ? 'selected' : '') + '>English API</option>' +
+                    '<option value="wiktionary" ' + (config.dictionaryType === 'wiktionary' ? 'selected' : '') + '>Wiktionary</option></select></div>' +
+                    '<div><label class="block text-sm font-semibold mb-1">Dictionary API URL</label>' +
+                    '<input type="text" value="' + (config.dictionaryApi || '') + '" onchange="updateConfig(\'dictionaryApi\', this.value)" class="w-full px-3 py-2 border rounded font-mono text-sm" placeholder="https://...">' +
+                    '<p class="text-xs text-gray-500 mt-1">Use {word} placeholder</p></div></div>';
+            } else if (state.activeTab === 'words') {
+                var words = currentLang.words || [];
+                contentHtml = '<div class="bg-white p-6 rounded-lg">' +
+                    '<div class="flex justify-between mb-4"><span class="font-semibold">' + words.length + ' words</span>' +
+                    '<button onclick="updateWords(document.getElementById(\'wordsTA\').value)" class="bg-purple-600 text-white px-4 py-2 rounded">Save</button></div>' +
+                    '<textarea id="wordsTA" class="w-full h-80 p-3 border rounded text-sm">' + words.join('\n') + '</textarea></div>';
+            }
+            
+            var deleteBtn = state.selectedLang !== 'en' ? '<button onclick="deleteLang(\'' + state.selectedLang + '\')" class="text-red-500 text-sm ml-4">🗑️ Delete</button>' : '';
+            var messageHtml = state.message ? '<div class="fixed bottom-4 right-4 px-4 py-2 rounded text-white ' + (state.messageType === 'error' ? 'bg-red-500' : 'bg-green-500') + '">' + state.message + '</div>' : '';
+            
+            app.innerHTML = '<div class="bg-white rounded-xl shadow-lg overflow-hidden">' +
+                '<div class="flex items-center border-b px-4 py-2 bg-gray-50">' + langTabs + addLangHtml + deleteBtn + '</div>' +
+                '<div class="p-6">' + contentTabs + contentHtml + '</div></div>' + messageHtml;
+        }
+
+        loadLanguages();
+    </script>
+</body>
+</html>
