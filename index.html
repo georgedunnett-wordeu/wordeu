@@ -550,6 +550,12 @@
         function checkWord(word) {
             var type = (langData && langData.config && langData.config.dictionaryType) || 'english';
             if (type === 'wiktionary') {
+                // For German, just check if word is in our list (Wiktionary API is unreliable)
+                var words = getWords();
+                if (words && words.indexOf(word.toUpperCase()) !== -1) {
+                    return Promise.resolve(true);
+                }
+                // If not in list, try Wiktionary as fallback
                 return fetch('https://' + currentLang + '.wiktionary.org/w/api.php?action=query&titles=' + encodeURIComponent(word.toLowerCase()) + '&format=json&origin=*')
                     .then(function(r) { return r.json(); })
                     .then(function(d) { return Object.keys(d.query.pages)[0] !== '-1'; })
@@ -1148,18 +1154,18 @@
             if (state.showInstructions) {
                 modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">' +
-                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">How to Play 5letters</h2>' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">' + t('howToPlayTitle') + '</h2>' +
                     '<div class="space-y-4 text-gray-700">' +
-                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span><p>Each player picks a secret 5-letter word with <strong>unique letters</strong></p></div>' +
-                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span><p>Take turns guessing your opponent\'s word</p></div>' +
-                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">3</span><p>After each guess, see how many letters match (but not which ones!)</p></div>' +
-                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">4</span><p>First to guess the opponent\'s word wins!</p></div>' +
-                    '<div class="border-t pt-4 mt-4"><p class="font-semibold mb-2">Tips:</p>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span><p>' + t('rule1') + '</p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span><p>' + t('rule2') + '</p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">3</span><p>' + t('rule3') + '</p></div>' +
+                    '<div class="flex items-start gap-3"><span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">4</span><p>' + t('rule4') + '</p></div>' +
+                    '<div class="border-t pt-4 mt-4"><p class="font-semibold mb-2">' + t('tips') + '</p>' +
                     '<ul class="list-disc list-inside space-y-1 text-sm">' +
-                    '<li><strong>Click</strong> a letter to exclude it (red)</li>' +
-                    '<li><strong>Long press</strong> a letter to include it (green)</li>' +
+                    '<li>' + t('tip1') + '</li>' +
+                    '<li>' + t('tip2') + '</li>' +
                     '</ul></div></div>' +
-                    '<button onclick="state.showInstructions = false; markInstructionsSeen(); render()" class="w-full mt-6 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">Got it!</button>' +
+                    '<button onclick="state.showInstructions = false; markInstructionsSeen(); render()" class="w-full mt-6 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('gotIt') + '</button>' +
                     '</div></div>';
             }
 
@@ -1403,16 +1409,16 @@
                 var hasGameCode = state.gameId && state.gameId.length > 0;
                 var buttonsHtml = hasGameCode 
                     ? '<button onclick="state.playerName = document.getElementById(\'playerName\').value; joinGame()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">Join Game ' + state.gameId + '</button>'
-                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg"' + t('playNow') + '</button>' +
+                    : '<button onclick="startSinglePlayer()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-4 rounded-lg transition text-lg shadow-lg">' + t('playNow') + '</button>' +
                       '<div class="flex gap-3 mt-4 pt-4 border-t border-gray-200">' +
-                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">2-Player Start</button>' +
-                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = \'Please enter your name\'; render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Join 2-Player Game</button></div>';
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; createGame()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">' + t('twoPlayerStart') + '</button>' +
+                      '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = t(\'enterName\'); render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">' + t('joinTwoPlayer') + '</button></div>';
                 
                 app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">' + t('logo') + '</h1>' +
                     '<div class="flex justify-center items-center gap-4 mb-6">' +
-                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold"' + t('howToPlay') + '</button>' +
-                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold"' + t('yourStats') + '</button>' +
+                    '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('howToPlay') + '</button>' +
+                    '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('yourStats') + '</button>' +
                     '<button onclick="toggleSound()" class="text-purple-600 hover:text-purple-800" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                     (state.soundEnabled 
                         ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
