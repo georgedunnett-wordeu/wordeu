@@ -1172,8 +1172,8 @@
             if (state.showQuitConfirm) {
                 modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                     '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
-                    '<h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Quit Game?</h3>' +
-                    '<p class="text-gray-600 mb-6 text-center">Are you sure you want to quit? Your progress will be lost.</p>' +
+                    '<h3 class="text-xl font-bold text-gray-800 mb-4 text-center">' + t('quitGame') + '</h3>' +
+                    '<p class="text-gray-600 mb-6 text-center">' + t('quitConfirm') + '</p>' +
                     '<div class="flex gap-3">' +
                     '<button onclick="state.showQuitConfirm = false; render()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition">Cancel</button>' +
                     '<button onclick="cancelGame()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition">Quit</button>' +
@@ -1272,7 +1272,7 @@
                             '<span class="bg-purple-500 text-white px-2 py-0.5 rounded-full text-sm font-bold">' + guess.matches + '</span></div>';
                     }
                 } else {
-                    guessesHtml = '<div class="text-gray-400 text-center py-4 text-sm">No guesses yet</div>';
+                    guessesHtml = '<div class="text-gray-400 text-center py-4 text-sm">' + t('noGuessesYet') + '</div>';
                 }
 
                 var gameEndBanner = '';
@@ -1302,12 +1302,12 @@
                 var circleSection = state.circleExpanded 
                     ? '<div class="mb-3"><button onclick="state.circleExpanded = false; render()" class="flex items-center gap-2 text-sm text-gray-600 mb-2 font-semibold hover:text-gray-800">' +
                       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>' +
-                      'Confirmed Letters (' + confirmedLetters.length + '/5)</button>' +
+                      t('confirmedLetters') + ' (' + confirmedLetters.length + '/5)</button>' +
                       '<div class="bg-gray-50 rounded-lg p-2">' +
                       '<div class="flex justify-center"><svg width="126" height="126" viewBox="0 0 154 154"><circle cx="77" cy="77" r="60" fill="none" stroke="#e5e7eb" stroke-width="2"/>' + circleSvg + '</svg></div></div></div>'
                     : '<div class="mb-3"><button onclick="state.circleExpanded = true; render()" class="flex items-center gap-2 text-sm text-gray-600 font-semibold hover:text-gray-800">' +
                       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
-                      'Confirmed Letters (' + confirmedLetters.length + '/5)</button></div>';
+                      t('confirmedLetters') + ' (' + confirmedLetters.length + '/5)</button></div>';
 
                 var guessInputHtml = '';
                 var isFirstGuess = sp.guesses.length === 0;
@@ -1319,7 +1319,7 @@
                         ? 'bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg'
                         : 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition';
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
-                        '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? 'Type your guess here' : 'Enter guess') + '" value="' + state.currentGuess + '" maxlength="5" class="' + inputClass + '">' +
+                        '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? t('typeGuessHere') : t('enterGuess')) + '" value="' + state.currentGuess + '" maxlength="5" class="' + inputClass + '">' +
                         '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="' + buttonClass + '"' + t('go') + '</button></div></div>';
                 }
 
@@ -1347,12 +1347,12 @@
                     guessInputHtml +
                     circleSection +
                     alphabetHint +
-                    '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
+                    '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">' + t('alphabetHint') + '</div>' +
                     '<div class="flex flex-wrap gap-1" id="spAlphabet">' + alphabetHtml + '</div></div>' +
                     firstGuessHint +
                     (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
                     (!sp.gameOver ? '<button onclick="giveUpSinglePlayer()" class="w-full mb-3 text-gray-500 hover:text-gray-700 text-sm">' + t('giveUp') + '</button>' : '') +
-                    '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
+                    '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">' + t('yourGuesses') + '</div>' +
                     '<div class="space-y-1 max-h-72 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
                     '<p class="text-gray-500 text-xs text-center mt-2">Copyright 2026 5letters.fun</p></div>' + modals;
 
@@ -1424,7 +1424,7 @@
                         ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
                         : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>') +
                     '</button></div>' +
-                    '<input type="text" id="playerName" placeholder="Your name (optional)" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
+                    '<input type="text" id="playerName" placeholder="' + t('namePlaceholder') + '" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
                     '<div class="flex justify-center gap-4 mt-4"><button onclick="switchLanguage(\'en\')" class="text-2xl ' + (currentLang==='en'?'':'opacity-40') + '">🇬🇧</button><button onclick="switchLanguage(\'de\')" class="text-2xl ' + (currentLang==='de'?'':'opacity-40') + '">🇩🇪</button></div>' +
@@ -1512,7 +1512,7 @@
                         '<span class="bg-purple-500 text-white px-2 py-0.5 rounded-full text-sm font-bold">' + guess.matches + '</span></div>';
                 }
             } else {
-                guessesHtml = '<div class="text-gray-400 text-center py-4 text-sm">No guesses yet</div>';
+                guessesHtml = '<div class="text-gray-400 text-center py-4 text-sm">' + t('noGuessesYet') + '</div>';
             }
 
             var gameEndContent = '';
@@ -1587,12 +1587,12 @@
                 goalHint +
                 circleSection +
                 alphabetHint +
-                '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">Alphabet (Click: exclude, Long press: include)</div>' +
+                '<div class="mb-3"><div class="text-xs text-gray-600 mb-1 font-semibold">' + t('alphabetHint') + '</div>' +
                 '<div class="flex flex-wrap gap-1" id="alphabet">' + alphabetHtml + '</div></div>' +
                 guessInputHtml +
                 firstGuessHint +
                 (state.message ? '<div class="mb-2 p-2 bg-purple-100 text-purple-800 rounded-lg text-center text-sm">' + state.message + '</div>' : '') +
-                '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">Your Guesses:</div>' +
+                '<div class="border-t pt-3"><div class="text-xs text-gray-600 mb-2 font-semibold">' + t('yourGuesses') + '</div>' +
                 '<div class="space-y-1 max-h-72 overflow-y-auto">' + guessesHtml + '</div></div></div>' +
                 gameEndContent + '<p class="text-gray-500 text-xs text-center mt-2">Copyright 2026 5letters.fun</p></div>' + modals;
 
