@@ -1178,7 +1178,7 @@
                     '<p class="text-gray-600 mb-6 text-center">' + t('quitConfirm') + '</p>' +
                     '<div class="flex gap-3">' +
                     '<button onclick="state.showQuitConfirm = false; render()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition">' + t('cancel') + '</button>' +
-                    '<button onclick="cancelGame()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition"'>' + t('quit') + '</button>' +
+                    '<button onclick="cancelGame()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('quit') + '</button>' +
                     '</div></div></div>';
             }
             
@@ -1285,18 +1285,18 @@
                             '<h2 class="text-2xl font-bold mb-1"' + t('youWon') + '</h2>' +
                             '<p class="text-sm mb-3">' + t('guessedIn') + ' ' + sp.guesses.length + '' + t('tries') + ' ' + t('theWordWas') + ' ' + sp.secretWord + '</p>' +
                             '<div class="flex justify-center gap-2">' +
-                            '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition"'>' + t('share') + '</button>' +
+                            '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('share') + '</button>' +
                             '<button onclick="startSinglePlayer()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition"' + t('playAgain') + '</button>' +
-                            '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition"'>' + t('home') + '</button>' +
+                            '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('home') + '</button>' +
                             '</div></div></div>';
                     } else {
                         gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 shadow-lg z-50">' +
                             '<div class="max-w-2xl mx-auto text-center">' +
-                            '<h2 class="text-2xl font-bold mb-1"'>' + t('gameOver') + '</h2>' +
+                            '<h2 class="text-2xl font-bold mb-1">' + t('gameOver') + '</h2>' +
                             '<p class="text-sm mb-3">' + t('theWordWas') + ': <span class="font-bold">' + sp.secretWord + '</span></p>' +
                             '<div class="flex justify-center gap-2">' +
                             '<button onclick="startSinglePlayer()" class="bg-white text-red-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Try Again</button>' +
-                            '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition"'>' + t('home') + '</button>' +
+                            '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('home') + '</button>' +
                             '</div></div></div>';
                     }
                 }
@@ -1531,10 +1531,10 @@
             } else if (opponent && opponent.won) {
                 gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 shadow-lg z-50">' +
                     '<div class="max-w-2xl mx-auto text-center">' +
-                    '<h2 class="text-2xl font-bold mb-1"'>' + t('youLost') + '</h2>' +
+                    '<h2 class="text-2xl font-bold mb-1">' + t('youLost') + '</h2>' +
                     '<p class="text-sm mb-3">' + opponent.name + ' guessed your word!</p>' +
                     '<div class="flex justify-center gap-2">' +
-                    '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition"'>' + t('share') + '</button>' +
+                    '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('share') + '</button>' +
                     '<button onclick="startRematch()" class="bg-white text-red-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">Rematch</button>' +
                     '</div></div></div>';
             } else if (!state.gameState.started) {
