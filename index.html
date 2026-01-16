@@ -594,9 +594,14 @@
         function checkUrlForGame() {
             var urlParams = new URLSearchParams(window.location.search);
             var gameCode = urlParams.get('game');
+            var langParam = urlParams.get('lang');
             if (gameCode) {
                 state.gameId = gameCode.toUpperCase();
                 state.message = 'Enter your name to join game ' + state.gameId;
+                // Switch to the game's language if specified
+                if (langParam && langParam !== currentLang) {
+                    switchLanguage(langParam);
+                }
             }
         }
         checkUrlForGame();
@@ -733,10 +738,57 @@
             }).catch(function(error) { state.message = 'Error finding game: ' + error.message; render(); });
         }
 
+        var prevGameState = null;
+        
+        function shouldSkipRender(oldState, newState) {
+            if (!oldState || !newState) return false;
+            if (!oldState.players || !newState.players) return false;
+            
+            // Find opponent ID
+            var opponentId = Object.keys(newState.players).find(function(id) { return id !== state.playerId; });
+            if (!opponentId) return false;
+            
+            // Create copies without opponent's letterStates and confirmedLetters for comparison
+            var dominated = ['letterStates', 'confirmedLetters'];
+            
+            // Check if anything OTHER than opponent's letterStates/confirmedLetters changed
+            // Compare top-level game properties
+            if (oldState.started !== newState.started) return false;
+            if (oldState.currentTurn !== newState.currentTurn) return false;
+            if (oldState.gameOver !== newState.gameOver) return false;
+            if (Object.keys(oldState.players).length !== Object.keys(newState.players).length) return false;
+            
+            // Check each player
+            for (var pid in newState.players) {
+                var oldPlayer = oldState.players[pid];
+                var newPlayer = newState.players[pid];
+                if (!oldPlayer) return false; // New player joined
+                
+                // For opponent, skip letterStates and confirmedLetters
+                if (pid === opponentId) {
+                    if (oldPlayer.word !== newPlayer.word) return false;
+                    if (oldPlayer.wordSet !== newPlayer.wordSet) return false;
+                    if (oldPlayer.won !== newPlayer.won) return false;
+                    if (oldPlayer.name !== newPlayer.name) return false;
+                    if (JSON.stringify(oldPlayer.guesses || []) !== JSON.stringify(newPlayer.guesses || [])) return false;
+                } else {
+                    // For my player, check everything
+                    if (JSON.stringify(oldPlayer) !== JSON.stringify(newPlayer)) return false;
+                }
+            }
+            
+            // If we get here, only opponent's letterStates/confirmedLetters changed
+            return true;
+        }
+        
         function listenToGame(gameId) {
             database.ref('games/' + gameId).on('value', function(snapshot) {
                 if (snapshot.exists()) {
-                    state.gameState = snapshot.val();
+                    var newGameState = snapshot.val();
+                    var skipRender = shouldSkipRender(prevGameState, newGameState);
+                    
+                    prevGameState = JSON.parse(JSON.stringify(newGameState)); // Deep copy for next comparison
+                    state.gameState = newGameState;
                     var myPlayer = state.gameState.players[state.playerId];
                     if (myPlayer) state.confirmedLetters = myPlayer.confirmedLetters || [];
                     
@@ -786,7 +838,8 @@
                             database.ref('games/' + gameId + '/players/' + state.playerId + '/statsRecorded').set(true);
                         }
                     }
-                    render();
+                    
+                    if (!skipRender) render();
                 }
             });
         }
@@ -948,6 +1001,7 @@
             state.gameId = '';
             state.singlePlayer = null;
             state.showQuitConfirm = false;
+            state.showShareModal = false;
             window.history.pushState({}, '', window.location.pathname);
             render();
         }
@@ -1398,7 +1452,7 @@
                 }
                 var shareModal = '';
                 if (state.showShareModal) {
-                    var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
+                    var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId + '&lang=' + currentLang;
                     shareModal = '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
                         '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
                         '<h3 class="text-xl font-bold text-gray-800 mb-2">' + t('gameCreated') + '</h3>' +
@@ -1438,7 +1492,7 @@
             if (!myPlayer.wordSet) {
                 var opponent = Object.values(state.gameState.players).find(function(p) { return p !== myPlayer; });
                 var playerCount = Object.keys(state.gameState.players).length;
-                var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId;
+                var gameUrl = window.location.origin + window.location.pathname + '?game=' + state.gameId + '&lang=' + currentLang;
                 var statusHtml = '';
                 if (playerCount === 1) {
                     statusHtml = '<div class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg text-center">' +
@@ -1527,6 +1581,7 @@
                     '<div class="flex justify-center gap-2">' +
                     '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('share') + '</button>' +
                     '<button onclick="startRematch()" class="bg-white text-green-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">' + t('rematch') + '</button>' +
+                    '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('home') + '</button>' +
                     '</div></div></div>';
             } else if (opponent && opponent.won) {
                 gameEndBanner = '<div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 shadow-lg z-50">' +
@@ -1536,6 +1591,7 @@
                     '<div class="flex justify-center gap-2">' +
                     '<button onclick="shareResult()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('share') + '</button>' +
                     '<button onclick="startRematch()" class="bg-white text-red-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition">' + t('rematch') + '</button>' +
+                    '<button onclick="cancelGame()" class="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-4 rounded-lg transition">' + t('home') + '</button>' +
                     '</div></div></div>';
             } else if (!state.gameState.started) {
                 gameEndContent = '<div class="bg-white rounded-2xl shadow-2xl p-4 text-center"><p class="text-gray-600">' + t('waitingForOpponent') + '</p></div>';
