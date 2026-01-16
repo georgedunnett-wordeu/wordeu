@@ -145,7 +145,7 @@
         var database = firebase.database();
 
         // ========== LANGUAGE SYSTEM ==========
-        var currentLang = localStorage.getItem('5letters_lang') || (navigator.language.startsWith('de') ? 'de' : 'en');
+        var currentLang = localStorage.getItem('5letters_lang') || (navigator.language.startsWith('de') ? 'de' : navigator.language.startsWith('fr') ? 'fr' : 'en');
         var langData = null;
         
         function t(key) { return (langData && langData.ui && langData.ui[key]) || key; }
@@ -1429,7 +1429,7 @@
                     '<input type="text" id="playerName" placeholder="' + t('namePlaceholder') + '" value="' + state.playerName + '" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:outline-none focus:border-purple-500">' +
                     buttonsHtml +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
-                    '<div class="flex justify-center gap-4 mt-4"><button onclick="switchLanguage(\'en\')" class="text-2xl ' + (currentLang==='en'?'':'opacity-40') + '">🇬🇧</button><button onclick="switchLanguage(\'de\')" class="text-2xl ' + (currentLang==='de'?'':'opacity-40') + '">🇩🇪</button></div>' +
+                    '<div class="flex justify-center gap-4 mt-4"><button onclick="switchLanguage(\'en\')" class="text-2xl ' + (currentLang==='en'?'':'opacity-40') + '">🇬🇧</button><button onclick="switchLanguage(\'de\')" class="text-2xl ' + (currentLang==='de'?'':'opacity-40') + '">🇩🇪</button><button onclick="switchLanguage(\'fr\')" class="text-2xl ' + (currentLang==='fr'?'':'opacity-40') + '">🇫🇷</button></div>' +
                     '</div><p class="text-gray-500 text-xs mt-4">Copyright 2026 5letters.fun</p></div>' + joinModal + shareModal + modals;
                 return;
             }
