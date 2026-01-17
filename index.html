@@ -1375,7 +1375,7 @@
                         ? 'bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg'
                         : 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition';
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
-                        '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? t('typeGuessHere') : t('enterGuess')) + '" value="' + state.currentGuess + '" maxlength="5" class="' + inputClass + '">' +
+                        '<input type="text" id="spGuess" placeholder="' + (isFirstGuess ? t('typeGuessHere') : t('enterGuess')) + '" value="' + state.currentGuess + '" maxlength="5" autocapitalize="characters" autocomplete="off" class="' + inputClass + '">' +
                         '<button onclick="state.currentGuess = document.getElementById(\'spGuess\').value; makeSinglePlayerGuess()" class="' + buttonClass + '">' + t('go') + '</button></div></div>';
                 }
 
@@ -1433,7 +1433,10 @@
                 });
 
                 var spGuessInput = document.getElementById('spGuess');
-                if (spGuessInput) spGuessInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.currentGuess = spGuessInput.value; makeSinglePlayerGuess(); } });
+                if (spGuessInput) {
+                    spGuessInput.addEventListener('input', function(e) { state.currentGuess = spGuessInput.value; });
+                    spGuessInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.currentGuess = spGuessInput.value; makeSinglePlayerGuess(); } });
+                }
                 
                 return;
             }
@@ -1513,7 +1516,7 @@
                 app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
                     '<h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">' + t('chooseSecretWord') + '</h2>' +
                     '<p class="text-gray-600 mb-4 text-center">' + t('pickWord') + '</p>' +
-                    '<input type="text" id="myWord" placeholder="' + t('secretWordPlaceholder') + '" value="' + state.myWord + '" maxlength="5" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                    '<input type="text" id="myWord" placeholder="' + t('secretWordPlaceholder') + '" value="' + state.myWord + '" maxlength="5" autocapitalize="characters" autocomplete="off" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                     '<button onclick="state.myWord = document.getElementById(\'myWord\').value; setSecretWord()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition text-lg">' + t('setWord') + '</button>' +
                     (state.message ? '<div class="mt-4 p-3 bg-purple-100 text-purple-800 rounded-lg text-center">' + state.message + '</div>' : '') +
                     statusHtml +
@@ -1616,7 +1619,7 @@
                 var turnMsg = isMyTurn ? t('yourTurn') : t('waitingFor') + ' ' + (opponent ? opponent.name : '') + '...';
                 if (isMyTurn) {
                     guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
-                        '<input type="text" id="currentGuess" placeholder="' + t('enterGuess') + '" value="' + state.currentGuess + '" maxlength="5" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                        '<input type="text" id="currentGuess" placeholder="' + t('enterGuess') + '" value="' + state.currentGuess + '" maxlength="5" autocapitalize="characters" autocomplete="off" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                         '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('go') + '</button></div></div>';
                 } else {
                     guessInputHtml = '<div class="mb-3 p-2 rounded-lg text-center text-sm font-semibold ' + turnClass + '">' + turnMsg + '</div>';
@@ -1674,7 +1677,10 @@
             });
 
             var guessInput = document.getElementById('currentGuess');
-            if (guessInput) guessInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.currentGuess = guessInput.value; makeGuess(); } });
+            if (guessInput) {
+                guessInput.addEventListener('input', function(e) { state.currentGuess = guessInput.value; });
+                guessInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { state.currentGuess = guessInput.value; makeGuess(); } });
+            }
 
             var showWordBtn = document.getElementById('showWordBtn');
             var secretWordEl = document.getElementById('secretWord');
