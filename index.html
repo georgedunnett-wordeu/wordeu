@@ -150,20 +150,37 @@
         
         function t(key) { return (langData && langData.ui && langData.ui[key]) || key; }
         function getAlphabet() { return ((langData && langData.config && langData.config.alphabet) || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ').split(''); }
-        function getWords() { return (langData && langData.words) || null; }
+        function getWords() {
+            // First try from loaded langData
+            if (langData && langData.words) return langData.words;
+            // Fall back to cached word list for offline support
+            return loadWordList(currentLang);
+        }
         
         function switchLanguage(lang) {
             currentLang = lang;
             localStorage.setItem('5letters_lang', lang);
             database.ref('languages/' + lang).once('value').then(function(snap) {
-                if (snap.exists()) langData = snap.val();
+                if (snap.exists()) {
+                    langData = snap.val();
+                    // Cache word list for offline support
+                    if (langData.words) {
+                        saveWordList(lang, langData.words);
+                    }
+                }
                 render();
             });
         }
-        
+
         // Load language on startup
         database.ref('languages/' + currentLang).once('value').then(function(snap) {
-            if (snap.exists()) langData = snap.val();
+            if (snap.exists()) {
+                langData = snap.val();
+                // Cache word list for offline support
+                if (langData.words) {
+                    saveWordList(currentLang, langData.words);
+                }
+            }
             render();
         }).catch(function() { render(); });
 
@@ -194,6 +211,24 @@
 
         function savePlayerName(name) {
             localStorage.setItem('wordoPlayerName_' + visitorId, name);
+        }
+
+        function saveWordList(lang, words) {
+            try {
+                localStorage.setItem('wordoWordList_' + lang, JSON.stringify(words));
+            } catch (e) {
+                // localStorage might be full, silently fail
+            }
+        }
+
+        function loadWordList(lang) {
+            try {
+                var cached = localStorage.getItem('wordoWordList_' + lang);
+                if (cached) return JSON.parse(cached);
+            } catch (e) {
+                // Parse error or missing, return null
+            }
+            return null;
         }
 
         function loadActiveGame() {
@@ -561,8 +596,17 @@
                     .then(function(d) { return Object.keys(d.query.pages)[0] !== '-1'; })
                     .catch(function() { return true; });
             }
+            // For English, try Dictionary API first, fall back to cached word list for offline support
             return fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + word.toLowerCase())
-                .then(function(r) { return r.ok; }).catch(function() { return false; });
+                .then(function(r) { return r.ok; })
+                .catch(function() {
+                    // If API fails (offline), check cached word list
+                    var words = getWords();
+                    if (words && words.indexOf(word.toUpperCase()) !== -1) {
+                        return true;
+                    }
+                    return false;
+                });
         }
 
         function shareGame(url) {
