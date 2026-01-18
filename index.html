@@ -21,6 +21,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
         .logo-font { font-family: 'Playfair Display', serif; }
+        .logo-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .logo-circle {
+            width: 36px;
+            height: 36px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            color: white;
+        }
+        .logo-box {
+            width: 32px;
+            height: 38px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+        }
+        .logo-green { background: #22c55e; }
+        .logo-red { background: #ef4444; }
+        .logo-gray { background: #374151; }
         .banner-enter { animation: slideDown 0.3s ease-out; }
         .banner-exit { animation: slideUp 0.3s ease-in forwards; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -156,7 +187,31 @@
             // Fall back to cached word list for offline support
             return loadWordList(currentLang);
         }
-        
+
+        function renderLogo() {
+            // Get logo configuration from language data
+            var logoConfig = langData && langData.ui && langData.ui.logo;
+            if (!logoConfig) {
+                // Fallback to simple text logo
+                return '<span class="text-2xl font-bold text-gray-800 logo-font">' + t('logoText') + '</span>';
+            }
+
+            var html = '<div class="logo-container">';
+            html += '<span class="logo-circle">5</span>';
+
+            var text = logoConfig.text || 'LETTERS';
+            var colors = logoConfig.colors || [];
+
+            for (var i = 0; i < text.length; i++) {
+                var letter = text[i];
+                var color = colors[i] || 'gray';
+                html += '<span class="logo-box logo-' + color + '">' + letter + '</span>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
         function switchLanguage(lang) {
             currentLang = lang;
             localStorage.setItem('5letters_lang', lang);
@@ -1431,7 +1486,7 @@
 
                 app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                     '<div class="flex items-center justify-between mb-3">' +
-                    '<h1 class="text-2xl font-bold text-gray-800 logo-font">' + t('logo') + '</h1>' +
+                    renderLogo() +
                     '<div class="flex items-center gap-2">' +
                     '<button onclick="toggleSound()" class="p-1 hover:bg-gray-100 rounded-lg" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                     (state.soundEnabled 
@@ -1518,7 +1573,7 @@
                       '<button onclick="state.playerName = document.getElementById(\'playerName\').value; if(!state.playerName.trim()) { state.message = t(\'enterName\'); render(); return; } state.showJoinModal = true; render()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">' + t('joinTwoPlayer') + '</button></div>';
                 
                 app.innerHTML = '<div class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">' +
-                    '<h1 class="text-4xl font-bold text-gray-800 text-center mb-2 logo-font">' + t('logo') + '</h1>' +
+                    '<div class="flex justify-center mb-2">' + renderLogo() + '</div>' +
                     '<div class="flex justify-center items-center gap-4 mb-6">' +
                     '<button onclick="state.showInstructions = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('howToPlay') + '</button>' +
                     '<button onclick="state.showStats = true; render()" class="text-purple-600 hover:text-purple-800 text-sm font-semibold">' + t('yourStats') + '</button>' +
@@ -1678,7 +1733,7 @@
 
             app.innerHTML = gameEndBanner + '<div class="max-w-2xl mx-auto p-2' + (gameEndBanner ? ' pt-24' : '') + '"><div class="bg-white rounded-2xl shadow-2xl p-4 mb-2">' +
                 '<div class="flex items-center justify-between mb-3">' +
-                '<h1 class="text-2xl font-bold text-gray-800 logo-font">' + t('logo') + '</h1>' +
+                renderLogo() +
                 '<div class="flex items-center gap-2">' +
                 '<button onclick="toggleSound()" class="p-1 hover:bg-gray-100 rounded-lg" title="' + (state.soundEnabled ? 'Mute' : 'Unmute') + '">' +
                 (state.soundEnabled 
