@@ -5,6 +5,10 @@ const languageData = {
   en: {
     ui: {
       logoText: "5letters",
+      logo: {
+        text: "LETTERS",
+        colors: ["green", "green", "red", "gray", "green", "red", "gray"]
+      },
       title: "5letters - Word Guessing Game",
       howToPlay: "How to Play",
       yourStats: "Your Stats",
@@ -251,6 +255,10 @@ const languageData = {
   de: {
     ui: {
       logoText: "5Buchstaben",
+      logo: {
+        text: "BUCHSTABEN",
+        colors: ["green", "red", "gray", "green", "gray", "red", "green", "gray", "green", "gray"]
+      },
       title: "5Buchstaben - Wort-Ratespiel",
       howToPlay: "So geht's",
       yourStats: "Statistik",
@@ -424,5 +432,22 @@ const languageData = {
 // 2. Open browser console (F12)
 // 3. Paste this whole file
 // 4. Run: firebase.database().ref('languages').set(languageData)
+
+// Logo Configuration Examples for Future Languages:
+//
+// French - "5LETTRES":
+//   logo: {
+//     text: "LETTRES",
+//     colors: ["green", "green", "red", "gray", "green", "green", "gray"]
+//   }
+//
+// Spanish - "5LETRAS":
+//   logo: {
+//     text: "LETRAS",
+//     colors: ["green", "green", "red", "gray", "green", "gray"]
+//   }
+//
+// Color options: "green", "red", "gray"
+// Green = confirmed letters, Red = excluded letters, Gray = neutral
 
 console.log("Language data ready. Run: firebase.database().ref('languages').set(languageData)");
