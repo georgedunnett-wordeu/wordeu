@@ -354,9 +354,11 @@
                     timestamp: Date.now(),
                     visitorId: visitorId,
                     data: data || null
+                }).catch(function(error) {
+                    // Silently fail if analytics permissions not configured
                 });
             } catch (e) {
-                console.log('Analytics error:', e);
+                // Silently fail if database not available
             }
         }
 
