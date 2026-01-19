@@ -790,7 +790,7 @@
             if (!state.playerName.trim()) { state.message = 'Please enter your name'; render(); return; }
             savePlayerName(state.playerName);
             var gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
-            var gameData = { players: {}, currentTurn: null, started: false, createdAt: Date.now(), gameOver: false };
+            var gameData = { players: {}, currentTurn: null, started: false, createdAt: Date.now(), gameOver: false, blitzMode: false, blitzModeRequestedBy: null, blitzModeAcceptedBy: [] };
             gameData.players[state.playerId] = {
                 name: state.playerName, visitorId: state.visitorId, word: '', wordSet: false,
                 guesses: [], letterStates: {}, confirmedLetters: [], won: false, statsRecorded: false
@@ -994,7 +994,10 @@
                     state.message = '🎉 You won!';
                     playSound('win'); haptic('success'); showConfetti();
                 } else {
-                    updates['games/' + state.gameId + '/currentTurn'] = opponentId;
+                    // Only switch turns if not in blitz mode
+                    if (!state.gameState.blitzMode) {
+                        updates['games/' + state.gameId + '/currentTurn'] = opponentId;
+                    }
                     if (matchCount > 0) { playSound('match'); haptic('medium'); }
                     else { playSound('click'); haptic('light'); }
                 }
@@ -1002,6 +1005,39 @@
                 state.currentGuess = '';
                 render();
             });
+        }
+
+        function requestBlitzMode() {
+            if (!state.gameState || !state.gameState.started) { return; }
+            var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
+            if (!opponentId) { return; }
+
+            database.ref('games/' + state.gameId).update({
+                blitzModeRequestedBy: state.playerId
+            });
+            playSound('click'); haptic('light');
+        }
+
+        function acceptBlitzMode() {
+            if (!state.gameState) { return; }
+            var acceptedBy = state.gameState.blitzModeAcceptedBy || [];
+            acceptedBy.push(state.playerId);
+
+            database.ref('games/' + state.gameId).update({
+                blitzModeAcceptedBy: acceptedBy,
+                blitzMode: true,
+                blitzModeRequestedBy: null
+            });
+            playSound('match'); haptic('success');
+        }
+
+        function declineBlitzMode() {
+            if (!state.gameState) { return; }
+
+            database.ref('games/' + state.gameId).update({
+                blitzModeRequestedBy: null
+            });
+            playSound('error'); haptic('light');
         }
 
         function startRematch() {
@@ -1336,7 +1372,23 @@
                     '<button onclick="cancelGame()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('quit') + '</button>' +
                     '</div></div></div>';
             }
-            
+
+            // Show blitz mode request dialog if opponent requested it
+            if (state.gameState && state.gameState.blitzModeRequestedBy && state.gameState.blitzModeRequestedBy !== state.playerId && !state.gameState.blitzMode) {
+                var requesterName = state.gameState.players[state.gameState.blitzModeRequestedBy] ? state.gameState.players[state.gameState.blitzModeRequestedBy].name : 'Opponent';
+                modals += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">' +
+                    '<div class="text-center mb-4"><div class="inline-block p-3 bg-orange-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" class="text-orange-600"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div></div>' +
+                    '<h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Blitz Mode Request</h3>' +
+                    '<p class="text-gray-600 mb-4 text-center"><strong>' + requesterName + '</strong> wants to play in Blitz Mode!</p>' +
+                    '<div class="bg-orange-50 rounded-lg p-3 mb-4 text-sm text-gray-700"><p class="mb-2">⚡ <strong>Blitz Mode:</strong> Both players can guess simultaneously without waiting for turns.</p>' +
+                    '<p class="text-xs text-gray-600">Race to guess your opponent\'s word first!</p></div>' +
+                    '<div class="flex gap-3">' +
+                    '<button onclick="declineBlitzMode()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition">Decline</button>' +
+                    '<button onclick="acceptBlitzMode()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition">Accept</button>' +
+                    '</div></div></div>';
+            }
+
             if (state.showStats) {
                 var stats = state.stats;
                 var winRate = stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0;
@@ -1630,7 +1682,7 @@
 
             var opponentId = Object.keys(state.gameState.players).find(function(id) { return id !== state.playerId; });
             var opponent = opponentId ? state.gameState.players[opponentId] : null;
-            var isMyTurn = state.gameState.currentTurn === state.playerId;
+            var isMyTurn = state.gameState.blitzMode || state.gameState.currentTurn === state.playerId;
             var letterStates = myPlayer.letterStates || {};
             var confirmedLetters = state.confirmedLetters || [];
 
@@ -1716,14 +1768,21 @@
             // Build guess input section
             var guessInputHtml = '';
             if (state.gameState.started && !myPlayer.won && !(opponent && opponent.won)) {
-                var turnClass = isMyTurn ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
-                var turnMsg = isMyTurn ? t('yourTurn') : t('waitingFor') + ' ' + (opponent ? opponent.name : '') + '...';
-                if (isMyTurn) {
-                    guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
+                if (state.gameState.blitzMode) {
+                    // In blitz mode, always show input
+                    guessInputHtml = '<div class="mb-3"><div class="p-2 bg-orange-100 text-orange-800 rounded-lg text-center text-sm font-bold mb-2">⚡ Blitz Mode Active!</div><div class="flex gap-2">' +
                         '<input type="text" id="currentGuess" placeholder="' + t('enterGuess') + '" value="' + state.currentGuess + '" maxlength="5" autocapitalize="characters" autocomplete="off" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
                         '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('go') + '</button></div></div>';
                 } else {
-                    guessInputHtml = '<div class="mb-3 p-2 rounded-lg text-center text-sm font-semibold ' + turnClass + '">' + turnMsg + '</div>';
+                    var turnClass = isMyTurn ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                    var turnMsg = isMyTurn ? t('yourTurn') : t('waitingFor') + ' ' + (opponent ? opponent.name : '') + '...';
+                    if (isMyTurn) {
+                        guessInputHtml = '<div class="mb-3"><div class="flex gap-2">' +
+                            '<input type="text" id="currentGuess" placeholder="' + t('enterGuess') + '" value="' + state.currentGuess + '" maxlength="5" autocapitalize="characters" autocomplete="off" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg uppercase text-center focus:outline-none focus:border-purple-500">' +
+                            '<button onclick="state.currentGuess = document.getElementById(\'currentGuess\').value; makeGuess()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition">' + t('go') + '</button></div></div>';
+                    } else {
+                        guessInputHtml = '<div class="mb-3 p-2 rounded-lg text-center text-sm font-semibold ' + turnClass + '">' + turnMsg + '</div>';
+                    }
                 }
             }
 
@@ -1745,7 +1804,13 @@
                 '<button onclick="state.showStats = true; render()" class="p-1 hover:bg-gray-100 rounded-lg" title="Stats"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></button>' +
                 (!gameEndBanner ? '<button onclick="confirmQuit()" class="p-1 hover:bg-gray-100 rounded-lg" title="Quit"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>' : '') +
                 '<div class="text-right"><div class="bg-gray-100 rounded px-2 py-1 text-xs font-bold">' + state.gameId + '</div>' +
-                '<div class="text-xs text-gray-500">vs ' + (opponent ? opponent.name : '...') + '</div></div></div></div>' +
+                '<div class="text-xs text-gray-500">vs ' + (opponent ? opponent.name : '...') + '</div>' +
+                (opponent && opponent.confirmedLetters ? '<div class="text-xs text-green-600 font-semibold">🎯 ' + (opponent.confirmedLetters.length || 0) + '/5</div>' : '') +
+                '</div></div></div>' +
+                (state.gameState.started && !myPlayer.won && !(opponent && opponent.won) && !state.gameState.blitzMode ?
+                    (state.gameState.blitzModeRequestedBy === state.playerId ?
+                        '<div class="mb-3 flex justify-center"><div class="flex items-center gap-1 bg-orange-100 text-orange-800 font-semibold py-1 px-3 rounded-lg text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>Waiting for ' + (opponent ? opponent.name : 'opponent') + ' to accept...</span></div></div>' :
+                        (!state.gameState.blitzModeRequestedBy ? '<div class="mb-3 flex justify-center"><button onclick="requestBlitzMode()" class="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 rounded-lg text-xs transition" title="Request Blitz Mode"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>Blitz Mode</span></button></div>' : '')) : '') +
                 goalHint +
                 circleSection +
                 alphabetHint +
