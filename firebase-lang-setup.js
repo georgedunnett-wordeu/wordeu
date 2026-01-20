@@ -112,7 +112,8 @@ const languageData = {
       shareGameText: "Join my 5letters game! ",
       go: "Go",
       vs: "vs",
-      solo: "Solo"
+      solo: "Solo",
+      confirmedLetters: "Confirmed Letters"
     },
     config: {
       alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -362,7 +363,8 @@ const languageData = {
       shareGameText: "Spiel mit mir 5Buchstaben! ",
       go: "Los",
       vs: "vs",
-      solo: "Solo"
+      solo: "Solo",
+      confirmedLetters: "Bestätigte Buchstaben"
     },
     config: {
       alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ",
