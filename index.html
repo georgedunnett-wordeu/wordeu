@@ -1164,22 +1164,76 @@
             render();
         }
 
+        // Get today's daily word (same for all players)
+        function getDailyWord(validWords) {
+            // Get today's date string (YYYY-MM-DD in UTC)
+            var now = new Date();
+            var dateStr = now.getUTCFullYear() + '-' +
+                         String(now.getUTCMonth() + 1).padStart(2, '0') + '-' +
+                         String(now.getUTCDate()).padStart(2, '0');
+
+            // Simple hash function for the date to get a seed
+            var hash = 0;
+            for (var i = 0; i < dateStr.length; i++) {
+                hash = ((hash << 5) - hash) + dateStr.charCodeAt(i);
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+
+            // Use the hash to select a word deterministically
+            var index = Math.abs(hash) % validWords.length;
+            return validWords[index];
+        }
+
+        // Get formatted date for sharing (e.g., "1st Jan")
+        function getFormattedDate() {
+            var now = new Date();
+            var day = now.getUTCDate();
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var month = months[now.getUTCMonth()];
+
+            // Add ordinal suffix
+            var suffix = 'th';
+            if (day === 1 || day === 21 || day === 31) suffix = 'st';
+            else if (day === 2 || day === 22) suffix = 'nd';
+            else if (day === 3 || day === 23) suffix = 'rd';
+
+            return day + suffix + ' ' + month;
+        }
+
         function startSinglePlayer() {
             var words = getWords() || WORD_LIST;
             // Filter to only words with unique letters
             var validWords = words.filter(function(w) { return hasUniqueLetters(w); });
-            var randomWord = validWords[Math.floor(Math.random() * validWords.length)];
+
+            // Check if this is the player's first game today
+            var lastDailyWord = localStorage.getItem('lastDailyWord');
+            var lastDailyDate = localStorage.getItem('lastDailyDate');
+            var today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            var isDailyWordGame = !lastDailyWord || lastDailyDate !== today;
+
+            var selectedWord;
+            if (isDailyWordGame) {
+                // First game of the day - use daily word
+                selectedWord = getDailyWord(validWords);
+                localStorage.setItem('lastDailyWord', selectedWord);
+                localStorage.setItem('lastDailyDate', today);
+            } else {
+                // Subsequent games - use random word
+                selectedWord = validWords[Math.floor(Math.random() * validWords.length)];
+            }
+
             state.singlePlayer = {
-                secretWord: randomWord,
+                secretWord: selectedWord,
                 guesses: [],
                 letterStates: {},
                 confirmedLetters: [],
                 gameOver: false,
-                won: false
+                won: false,
+                isDailyWord: isDailyWordGame
             };
             state.currentGuess = '';
             state.message = '';
-            logEvent('game_started', { mode: 'solo' });
+            logEvent('game_started', { mode: 'solo', isDailyWord: isDailyWordGame });
             render();
         }
 
@@ -1213,7 +1267,8 @@
                         guesses: state.singlePlayer.guesses.length,
                         myWord: '-',
                         theirWord: secretWord,
-                        guessData: state.singlePlayer.guesses.slice(-3) // Last 3 guesses for sharing
+                        guessData: state.singlePlayer.guesses.slice(-3), // Last 3 guesses for sharing
+                        isDailyWord: state.singlePlayer.isDailyWord
                     };
                     saveGameToHistory(gameRecord);
                     updateStats(true, state.singlePlayer.guesses.length);
@@ -1269,7 +1324,8 @@
                 guesses: state.singlePlayer.guesses.length,
                 myWord: '-',
                 theirWord: state.singlePlayer.secretWord,
-                guessData: state.singlePlayer.guesses.slice(-3)
+                guessData: state.singlePlayer.guesses.slice(-3),
+                isDailyWord: state.singlePlayer.isDailyWord
             };
             saveGameToHistory(gameRecord);
             updateStats(false, 0);
@@ -1308,11 +1364,20 @@
                 });
             }
             
-            var opponentText = result.opponent === 'Computer' ? '' : ' against ' + result.opponent;
-            var header = result.won 
-                ? '🎉 I won at 5letters in ' + result.guesses + ' guesses' + opponentText + '!'
-                : '😅 I lost at 5letters after ' + result.guesses + ' guesses' + opponentText;
-            
+            var header;
+            if (result.isDailyWord) {
+                // Special format for daily word
+                var formattedDate = getFormattedDate();
+                var guessText = result.guesses === 1 ? 'guess' : 'guesses';
+                header = "Today's 5letters " + formattedDate + ' - ' + result.guesses + ' ' + guessText;
+            } else {
+                // Regular format for other games
+                var opponentText = result.opponent === 'Computer' ? '' : ' against ' + result.opponent;
+                header = result.won
+                    ? '🎉 I won at 5letters in ' + result.guesses + ' guesses' + opponentText + '!'
+                    : '😅 I lost at 5letters after ' + result.guesses + ' guesses' + opponentText;
+            }
+
             var text = header + '\n\n' + guessGrid + '\nhttps://5letters.fun';
             
             if (navigator.share) {
