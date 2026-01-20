@@ -1360,7 +1360,12 @@
                             line += '🟥';
                         }
                     }
-                    guessGrid += guess.word + ' ' + line + ' ' + guess.matches + '\n';
+                    // For daily word, don't include guess words (spoilers!)
+                    if (result.isDailyWord) {
+                        guessGrid += line + ' ' + guess.matches + '\n';
+                    } else {
+                        guessGrid += guess.word + ' ' + line + ' ' + guess.matches + '\n';
+                    }
                 });
             }
             
