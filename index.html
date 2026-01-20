@@ -52,6 +52,22 @@
         .logo-green { background: #22c55e; }
         .logo-red { background: #ef4444; }
         .logo-gray { background: #374151; }
+        /* Mobile responsive logo sizing */
+        @media (max-width: 640px) {
+            .logo-container {
+                gap: 2px;
+            }
+            .logo-circle {
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+            }
+            .logo-box {
+                width: 22px;
+                height: 26px;
+                font-size: 13px;
+            }
+        }
         .banner-enter { animation: slideDown 0.3s ease-out; }
         .banner-exit { animation: slideUp 0.3s ease-in forwards; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
